@@ -2,7 +2,7 @@
 
 Private web app to monitor and control a Dell Linux Mint server from an ASUS laptop, phones and tablets over Tailscale. Development runs on the ASUS (Windows); deployment to the Dell comes in M6.
 
-**Status:** M1 (project bootstrap). Milestones and decisions are in [docs/](docs/); start with [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
+**Status:** M1 (project bootstrap) approved; M2 (real metrics) next. Milestones and decisions are in [docs/](docs/); start with [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
 
 ## Structure
 
@@ -23,6 +23,8 @@ Python 3.12+ (the Dell runs 3.12), Node 20+, Git. Nothing is installed globally:
 | Task | Command |
 |---|---|
 | Setup (once, re-runnable) | `powershell -ExecutionPolicy Bypass -File scripts\setup.ps1` |
+| Start dev (double-click) | `start.bat`: opens 2 windows + the UI in the browser |
+| Stop dev (double-click) | `stop.bat`: stops ports 8000/5173 and closes those windows |
 | Dev (opens 2 windows) | `powershell -ExecutionPolicy Bypass -File scripts\dev.ps1` |
 | Lint + tests + build | `powershell -ExecutionPolicy Bypass -File scripts\test.ps1` |
 | Production build | `powershell -ExecutionPolicy Bypass -File scripts\build.ps1` |
