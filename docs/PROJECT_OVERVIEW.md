@@ -1,6 +1,6 @@
 # Server Control — Project Overview
 
-> **Phiên bản:** 0.2 (draft, chưa triển khai)  
+> **Phiên bản:** 0.3 (M1 đã code; thêm FR-08 Mobile Background & Screen Control cho M7)  
 > **Cập nhật:** 2026-10-31  
 > **Mục tiêu:** HomeLab Control — web riêng quản trị Dell Linux từ ASUS/điện thoại/tablet qua Tailscale; kiến trúc phải mở rộng được để **quản lý/điều khiển chính điện thoại, máy tính bảng** trong tương lai.  
 > **Nguyên tắc:** **Viết và kiểm thử trên ASUS trước → tích hợp Dell có kiểm soát → deploy lên Dell để chạy độc lập 24/7**.
@@ -8,14 +8,14 @@
 ## Project re-entry — đọc trong 10 phút
 
 1. **Mục tiêu:** Một website chủ sở hữu dùng để xem giám sát realtime, điều khiển desktop Linux GUI, quản lý file và xem/điều khiển có giới hạn các dịch vụ. Không có trang CLI riêng: terminal nằm trong desktop Linux.
-2. **Tình trạng:** M0 đã duyệt (2026-10-31). M1 bootstrap xong trên ASUS, chờ owner duyệt; xem trạng thái thực tế trong `MILESTONES.md`, không suy từ đặc tả.
-3. **Thiết bị:** ASUS Vivobook Windows = máy phát triển; Dell Latitude 3330, Linux Mint 22.3, i5-3337U (2C/4T), ~3.7 GiB RAM, HDD ~500 GB, phân vùng Linux ~96 GB = server production; điện thoại/tablet = browser client của v1 **và thiết bị mục tiêu cần hỗ trợ trong tương lai**.
+2. **Tình trạng:** M0 và M1 (bootstrap trên ASUS) đã duyệt 2026-10-31; đang làm M2; xem trạng thái thực tế trong `MILESTONES.md`, không suy từ đặc tả.
+3. **Thiết bị:** ASUS Vivobook Windows = máy phát triển; Dell Latitude 3330, Linux Mint 22.3, i5-3337U (2C/4T), ~3.7 GiB RAM, HDD ~500 GB, phân vùng Linux ~96 GB = server production; điện thoại/tablet = browser client của v1 **và thiết bị mục tiêu cần hỗ trợ trong tương lai**. Điện thoại Xiaomi (HyperOS 3 / Android 16) và tablet Samsung Galaxy Tab S10 Lite 5G (không có thiết bị iOS, không có Mac) đã cài Tailscale và có IP tailnet, nhưng **chưa có companion agent và chưa điều khiển được**.
 4. **Đã có trên Dell:** SSH, Tailscale, NetworkManager hoạt động; `Wake on AC` đã bật; đã có ý định cấu hình systemd chống sleep và lid switch. **Chưa xác minh lại toàn bộ sau reboot và chưa có kiểm thử dashboard**.
 5. **Rủi ro nghiêm trọng:** Pin chính báo 0% / `Communication Error`. Sau khi ngắt nguồn điện, BIOS báo `Invalid configuration information` và `Time-of-day not set`, yêu cầu **F1**. Có khả năng pin CMOS/RTC yếu. **Không được quảng cáo tự phục hồi 100% khi mất điện.** Chưa có xử lý phần cứng.
 6. **Cách truy cập production dự kiến:** HTTPS riêng trong tailnet qua **Tailscale Serve**, chuyển tiếp về ứng dụng trên `127.0.0.1`. Không dùng Funnel, không mở router port forwarding.
 7. **Ranh giới:** Windows có thể test monitoring thật của **ASUS**; muốn xem GUI Linux thật phải chạy desktop/VNC trên **Dell**, dù frontend/backend đang phát triển trên ASUS.
 8. **Đọc thứ tự:** `SPEC.md` → `ARCHITECTURE.md` → `MILESTONES.md` → `CONTEXT.md`.
-9. **Việc kế tiếp:** Hoàn thành/nghiệm thu **M1**, rồi M2. O-01..O-06 chốt tại milestone tương ứng; chưa cài Cockpit hoặc giao diện nặng trên Dell.
+9. **Việc kế tiếp:** **M2** (metrics thật), rồi M2.5. O-01..O-11 chốt tại milestone tương ứng; chưa cài Cockpit hoặc giao diện nặng trên Dell. FR-08 (mobile chạy nền / giữ sáng màn hình) đã đặc tả cho **M7D**, chưa code.
 10. **Quy tắc vận hành:** Không cài/deploy gì lên Dell khi chưa có bước thử/rollback rõ ràng; không tự chạy lệnh nguy hiểm từ UI.
 
 ## Vision & trải nghiệm
@@ -25,6 +25,7 @@
 - Remote Desktop: GUI Linux có cửa sổ, chuột/bàn phím và **Terminal nằm trong desktop**. Có toàn màn hình; có thể bắt đầu/kết thúc phiên khi cần.
 - Files: duyệt/tải lên/tải xuống file trong **thư mục được cho phép**, chặn đi ra ngoài vùng đó.
 - System: health, services, logs; thao tác thay đổi hệ thống chỉ mở theo allowlist, cần xác nhận. Trước khi sửa lỗi F1, không cho tắt/reboot từ UI bằng một cú nhấp.
+- Sau v1 (M7D): từ ASUS xem điện thoại/tablet đã đăng ký online hay offline, yêu cầu bật/tắt chạy nền của agent và giữ màn hình sáng (tablet làm dashboard cố định). UI chỉ báo thành công khi thiết bị xác nhận.
 
 ## Những gì không làm trong phiên bản đầu
 
@@ -42,6 +43,11 @@
 - **Android:** khảo sát kết nối ADB/scrcpy hoặc agent có sự đồng ý của chủ thiết bị; chưa cam kết remote qua Internet hay mọi chức năng đều hoạt động.
 - **iOS/iPadOS:** phải khảo sát giới hạn chia sẻ màn hình và điều khiển do hệ điều hành áp đặt; **không hứa toàn quyền điều khiển như desktop**.
 - Thiết kế `device_id`, `platform`, `capabilities` và adapter/driver phù hợp từ đầu, **chưa cài service mobile trong MVP**.
+- **FR-08 (M7D):** companion agent có sự đồng ý của chủ thiết bị nhận lệnh `background_operations` / `keep_screen_awake` theo lifecycle có xác nhận. Android dùng foreground service; iOS/iPadOS chạy nền là `unsupported`, giữ sáng chỉ khi app/trang đang hiển thị. Không đánh thức màn hình đã khóa, không root/jailbreak. Chi tiết: SPEC FR-08, ARCHITECTURE §4A.
+
+## Roadmap
+
+M0 tài liệu (duyệt) → M1 bootstrap ASUS (duyệt) → M2 metrics thật → M2.5 auth → M3 Remote Desktop Dell → M4 Files → M5 Services → M6 production Dell = **v1** → M7 nhiều thiết bị + mobile managed target (M7A registry, M7B screen/input/file, M7C history/alerts, M7D background & screen control). Trạng thái thật: `MILESTONES.md`.
 
 ## Nguyên tắc thiết kế
 

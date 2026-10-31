@@ -1,6 +1,6 @@
 # Server Control — Product & Technical Specification
 
-> Status: **DRAFT v0.2**, cần owner review trước khi viết M1.  
+> Status: **DRAFT v0.3** (2026-10-31: thêm FR-08 Mobile Background & Screen Control, giai đoạn M7 sau v1). v0.2 đã duyệt ở M0.  
 > Phạm vi v1: **một chủ sở hữu**, **một Dell Linux server**, truy cập từ nhiều client qua browser. **Yêu cầu lâu dài đã chốt:** điện thoại/tablet cũng là thiết bị đích có thể được quản lý/điều khiển, không chỉ là client.
 
 ## 1. Actors, môi trường và quy ước
@@ -65,6 +65,37 @@ Phân biệt **desktop ảo** (một session Xvnc/XFCE của Dell) với **máy 
 - `FR-07.6`: M7 chỉ được bắt đầu sau khi v1 ổn định; không thêm mobile runtime, agent, cổng hay permission mới vào MVP chỉ để dự phòng.
 - `FR-07.7`: Không xây công cụ truy cập ẩn, điều khiển không đồng ý hoặc vượt cơ chế bảo mật của hệ điều hành; mỗi thiết bị có thể từ chối/ngắt phiên.
 
+### FR-08 — Mobile Background & Screen Control (P2 — sau v1, M7D)
+
+Owner dùng Server Control trên ASUS để quản lý điện thoại/tablet **đã đăng ký** (managed target, FR-07.1). Mọi hành vi trên thiết bị do **companion agent** có sự đồng ý của chủ thiết bị thực hiện. Tailscale chỉ là đường truyền; một thiết bị chỉ cài Tailscale thì chưa có agent và chưa điều khiển được. Kiến trúc chi tiết: `ARCHITECTURE.md` §4A.
+
+**A. Background operations**
+- `FR-08.1`: Danh sách thiết bị hiển thị online/offline theo **heartbeat của agent** (`last_seen` trong ngưỡng), không theo việc thiết bị có trong tailnet. Thiết bị chưa đăng ký agent hiển thị "chưa đăng ký", không có nút điều khiển.
+- `FR-08.2`: Owner yêu cầu bật/tắt hoạt động nền của agent, **trong giới hạn hệ điều hành**. Nếu OS không cho phép, hiển thị `unsupported` hoặc `denied` kèm lý do.
+- `FR-08.3`: Trạng thái điều khiển chỉ có các giá trị `enabled | disabled | pending | denied | unsupported | offline | error`, theo quy tắc ở `ARCHITECTURE.md` §4A.4.
+- `FR-08.4`: Tách **desired** (owner yêu cầu) và **reported** (thiết bị xác nhận, có `reported_at`). UI hiển thị reported là trạng thái thật; khi hai giá trị khác nhau thì hiển thị cả hai.
+- `FR-08.5`: Không giả định agent chạy nền vĩnh viễn. OS, chế độ tiết kiệm pin hoặc người dùng có thể dừng agent; mất heartbeat ⇒ `offline`. UI không được ghi "luôn chạy".
+
+**B. Keep screen awake**
+- `FR-08.6`: Owner yêu cầu bật/tắt giữ màn hình sáng. Chế độ này chỉ có hiệu lực khi **ứng dụng điều khiển (agent app hoặc trang Server Control) đang hiển thị** và màn hình chưa khóa. Reported state có thêm `active` (đang thực sự giữ sáng hay không).
+- `FR-08.7`: Hỗ trợ **tablet dashboard mode**: tablet mở Dashboard toàn màn hình và giữ sáng. Ưu tiên Screen Wake Lock API của trình duyệt (cần HTTPS, có qua Tailscale Serve) hoặc dùng agent app. Ghim màn hình / Guided Access do owner tự bật trên thiết bị.
+- `FR-08.8`: **Giữ sáng ≠ đánh thức.** FR-08 không bật màn hình đã tắt/khóa từ xa và không có lệnh `wake_screen`. Nếu cần về sau thì đó là capability riêng, chỉ thêm sau khi kiểm chứng trên thiết bị thật.
+
+**C. Capabilities**
+- `FR-08.9`: Bổ sung `background_operations`, `keep_screen_awake`. Giữ nguyên các tên M7 đã có: `screen_view`, `remote_input`, `file_transfer` (triển khai ở M7B, không thuộc FR-08). `files` là File Manager trên server (M4); `file_transfer` là truyền file tới/từ thiết bị đích. Hai tên này không trùng nghĩa.
+
+**D. Android và iOS/iPadOS** (mọi giới hạn dưới đây đều **[cần xác minh trên thiết bị thật]**, chi tiết ở `ARCHITECTURE.md` §4A.5)
+- `FR-08.10`: Android dùng companion app có chủ thiết bị đồng ý. Chạy nền bằng foreground service, luôn có notification hiển thị. Giữ sáng bằng cờ cửa sổ khi app đang hiển thị. Quyền (thông báo, miễn tối ưu pin…) do chủ thiết bị tự cấp qua hộp thoại/Settings của OS.
+- `FR-08.11`: iOS/iPadOS không có cơ chế chạy nền liên tục cho agent kiểu này ⇒ `background_operations` mặc định `unsupported`. Giữ sáng chỉ khi app/trang web đang hiển thị. Không có API công khai để điều khiển input toàn hệ thống. Agent native cần macOS + Xcode; owner không có Mac và hiện không có thiết bị iOS (D-22) ⇒ chỉ giữ ở mức thiết kế.
+- `FR-08.12`: Không root/jailbreak, không tự bật quyền nguy hiểm hay USB/wireless debugging, không chạy ẩn, không vượt cơ chế bảo mật OS. Chủ thiết bị luôn có thể tắt agent, thu hồi quyền hoặc gỡ app.
+
+**E. Command lifecycle**
+- `FR-08.13`: Mỗi lệnh đi qua `requested → delivered → acknowledged → applied | denied | failed | timed_out`. Lệnh có `command_id` (server sinh), `device_id`, `type`, `params`, `requested_by`, timestamp từng bước, `expires_at`, `result {code, message}`.
+- `FR-08.14`: `type` thuộc **enum cố định** (`set_background_operations`, `set_keep_screen_awake`); `params` được validate theo schema. Không có lệnh shell hay lệnh tự do gửi tới thiết bị (mở rộng D-15).
+- `FR-08.15`: Trước khi tạo lệnh, kiểm tra 3 điều: owner đã xác thực (M2.5), thiết bị đã đăng ký và chưa bị thu hồi, capability ở trạng thái `supported`. Không đạt ⇒ trả lỗi `{code, message}` và không tạo lệnh.
+- `FR-08.16`: **Không báo thành công khi mới gửi lệnh.** Chỉ `applied` (agent xác nhận đã áp dụng) mới được hiển thị là thành công. Ở các bước trước, UI hiện "đang chờ thiết bị". Quá hạn ⇒ `timed_out`. Agent bỏ qua lệnh trùng `command_id`.
+- `FR-08.17`: Mọi lệnh và kết quả được ghi audit log có giới hạn dung lượng, không chứa token.
+
 ### FR-06 — Deployment/operations (P0)
 - `FR-06.1`: Cùng source code chạy được trên Windows và Linux; platform-specific provider chỉ khác chỗ đọc metrics, services, desktop.
 - `FR-06.2`: Build frontend trên ASUS; Dell phục vụ static build và backend qua **một origin**; không chạy Vite dev server trên Dell production.
@@ -86,6 +117,9 @@ Phân biệt **desktop ảo** (một session Xvnc/XFCE của Dell) với **máy 
 | NFR-08 | Testability | Backend API tests + frontend build/test; smoke test mạng và VNC trên Dell. |
 | NFR-09 | Sử dụng tài nguyên | VNC/XFCE được bật theo nhu cầu; không bật khi server idle nếu không cần. |
 | NFR-10 | Bảo trì | Lệnh setup/run/build/deploy/rollback trong README; tài liệu re-entry 10 phút. |
+| NFR-11 | Trạng thái điều khiển trung thực (M7) | Không có `applied` nếu agent chưa xác nhận; mọi reported state có `reported_at`; lệnh luôn kết thúc (có timeout). |
+| NFR-12 | Nhẹ cho Dell và pin mobile (M7) | Không thêm tiến trình/dịch vụ mới trên Dell; agent dùng heartbeat/long-poll có chu kỳ cấu hình được; đo mức hao pin trên thiết bị thật trước khi chốt chu kỳ. |
+| NFR-13 | Bảo mật thiết bị (M7) | Token riêng từng thiết bị, thu hồi được, server chỉ lưu hash; agent chỉ đọc lệnh của chính nó; không mở cổng lắng nghe trên điện thoại/tablet. |
 
 ## 4. API contract dự kiến (có thể đổi trước M2)
 
@@ -103,8 +137,10 @@ POST /api/services/{id}/restart -> disabled until M5 authorization verified
 
 - Mọi payload phải có `timestamp` hoặc `last_updated` để nhận biết dữ liệu cũ.
 - `device` = `{id, label, role, platform, device_type}` (FR-07.2). `id` ổn định, không phụ thuộc IP/hostname: env `DEVICE_ID`, nếu trống thì UUID sinh một lần và lưu ở `backend/.state/device_id` (gitignored). `online_status`/`last_seen` thuộc device registry ở M7.
-- `capabilities` = map `{tên: {status, message}}`, `status ∈ supported | unsupported | not_configured | requires_consent`. Tên v1: `metrics`, `temperature`, `fans`, `battery`, `desktop`, `files`, `services`. M7 bổ sung `screen_view`, `remote_input`, `file_transfer`.
+- `capabilities` = map `{tên: {status, message}}`, `status ∈ supported | unsupported | not_configured | requires_consent`. Tên v1: `metrics`, `temperature`, `fans`, `battery`, `desktop`, `files`, `services`. M7 bổ sung `screen_view`, `remote_input`, `file_transfer`, `background_operations`, `keep_screen_awake` (FR-08.9). Capability nói thiết bị **có thể** làm gì; trạng thái bật/tắt hiện tại là **control state** riêng (FR-08.3).
+- `device_type` v1 = `computer`; M7 thêm `phone`, `tablet`.
 - v1 giữ endpoint phẳng cho thiết bị local; M7 thêm `/api/devices/{id}/...`, endpoint phẳng thành alias của thiết bị local.
+- M7D (dự kiến, chốt khi làm): `GET /api/devices`, `POST /api/devices/{id}/commands` → `202 {command_id, status: "requested"}`, `GET /api/devices/{id}/commands/{command_id}`; nhóm `/api/agent/*` (enroll, heartbeat/state, lấy lệnh, ack, result) chỉ nhận token thiết bị. Xem `ARCHITECTURE.md` §4A.3.
 - `/api/metrics` không truyền password/token; field invalid/unsupported phải có trạng thái dễ nhận biết.
 - Error format ổn định (`code`, `message`, `request_id?`) để frontend xử lý.
 - `GET /api/desktop/status` có thể không có connection URL khi ngừng chạy; **không trả token xác thực VNC trong dữ liệu công khai**.
@@ -132,12 +168,20 @@ POST /api/services/{id}/restart -> disabled until M5 authorization verified
 4. Giao diện đồ họa có dùng XFCE ảo riêng hay ưu tiên chia sẻ console thật? **Đang chọn mặc định XFCE ảo**, có thể điều chỉnh nếu owner cần chia sẻ chính xác desktop vật lý.
 5. Lưu lịch sử metrics lâu dài (SQLite) và thông báo cảnh báo qua điện thoại: không thuộc MVP.
 6. Khi bổ sung giám sát nhiều máy, từng máy có agent hay API proxy theo SSH: để milestone sau.
+7. FR-08: model/phiên bản OS của điện thoại/tablet, công nghệ và cách phân phối agent Android, nơi lưu registry, có cần agent iOS native không, chu kỳ heartbeat/timeout: xem `CONTEXT.md` O-07..O-11.
 
 ### Acceptance criteria cho mở rộng M7 (không dùng để nghiệm thu v1)
 - `AT-M7-01`: Danh sách thiết bị phân biệt browser client và managed target; hiển thị platform/capabilities từ dữ liệu thật.
 - `AT-M7-02`: Tính năng không hỗ trợ trên Android/iOS hiển thị rõ lý do, không hiện nút điều khiển giả hoặc trạng thái thành công giả.
 - `AT-M7-03`: Chỉ truy cập thiết bị được chủ sở hữu cho phép; kết thúc phiên hoặc thu hồi quyền phải làm mất quyền điều khiển tương ứng.
 - `AT-M7-04`: Trước khi tuyên bố đã điều khiển được Android/iPad/iPhone, bắt buộc kiểm thử trên thiết bị thật và ghi rõ giới hạn theo OS.
+- `AT-M7-05` (FR-08.1): Tắt agent hoặc mạng trên thiết bị ⇒ sau ngưỡng heartbeat UI chuyển `offline`; bật lại ⇒ `online`. Thiết bị chỉ có Tailscale, chưa có agent ⇒ hiển thị "chưa đăng ký".
+- `AT-M7-06` (FR-08.13/16): Gửi lệnh tới thiết bị offline ⇒ `requested` rồi `timed_out`, **không bao giờ** hiện thành công. Gửi tới thiết bị online ⇒ đủ các bước tới `applied`, có timestamp từng bước.
+- `AT-M7-07` (FR-08.2/10): Trên Android thật, bật background ⇒ notification foreground service xuất hiện và agent vẫn gửi heartbeat sau khi tắt màn hình N phút (N chốt khi test). Tắt ⇒ notification biến mất. Kết quả ghi theo model/phiên bản Android.
+- `AT-M7-08` (FR-08.6/7): Tablet ở dashboard mode giữ sáng quá thời gian tự tắt màn hình của OS khi trang/app đang hiển thị; chuyển app khác hoặc khóa máy ⇒ `active=false`. Không có lệnh nào bật được màn hình đã khóa.
+- `AT-M7-09` (FR-08.11/12): Trên iPhone/iPad, `background_operations` hiển thị `unsupported` kèm lý do; không có nút điều khiển giả.
+- `AT-M7-10` (FR-08.15/NFR-13): Chưa xác thực owner, token thiết bị bị thu hồi, sai `device_id` hoặc capability không `supported` ⇒ bị từ chối và không tạo lệnh. Agent không đọc được lệnh của thiết bị khác.
+- `AT-M7-11` (FR-08.12): Chủ thiết bị từ chối quyền trên OS ⇒ kết quả `denied` hiển thị đúng; không có bước nào tự cấp quyền hay yêu cầu root/jailbreak.
 
 ## 7. Tham chiếu chính thức
 

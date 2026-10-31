@@ -28,6 +28,7 @@ Owner muốn tận dụng laptop Linux cũ làm server tại nhà 24/7 và tự 
 | Dell POST | Sau tháo nguồn, báo `Invalid configuration information` + `Time-of-day not set`, đòi F1 | Trực tiếp chụp ảnh |
 | Dell RTC | Nghi CMOS/RTC yếu/hỏng; **chưa được xác nhận bằng thay linh kiện** | Suy luận kỹ thuật |
 | Tailscale + SSH | Owner đã SSH từ ASUS vào Dell | Owner xác nhận |
+| Điện thoại + tablet | Đã cài Tailscale, đã có Tailscale IP (không ghi IP vào tài liệu). **Cả hai là Android.** Điện thoại: Xiaomi, mẫu `24117RN76O` (suy ra là Redmi Note 14 4G), Helio G99-Ultra, RAM 8 GB, **HyperOS 3.0 / Android 16**, bản vá 2026-09-01. Tablet: **Samsung Galaxy Tab S10 Lite 5G** (`SM-X406B`), phiên bản Android/One UI chưa ghi. Không có iPhone/iPad, không có Mac. Không lưu IMEI/số sê-ri. **Chưa có companion agent, chưa điều khiển được** | Owner xác nhận 2026-10-31 |
 
 ## 3. Quyết định đã chốt (DO NOT RE-ASK)
 
@@ -58,6 +59,15 @@ Owner muốn tận dụng laptop Linux cũ làm server tại nhà 24/7 và tự 
 - `D-15` "Không shell" nghĩa là: không lệnh nào lấy từ input browser. Hành động allowlist (vd. start/stop desktop ở M3) được gọi **lệnh cố định** qua subprocess argv, không `shell=True`.
 - `D-16` Auth là milestone riêng **M2.5**, bắt buộc trước M3/M4/M5; O-02 chốt tại M2.5.
 
+### Quyết định bổ sung: Mobile Background & Screen Control (2026-10-31)
+
+- `D-17` Thêm **FR-08** (SPEC) vào phạm vi M7, thực hiện ở **M7D** sau v1. Thứ tự M0–M6 không đổi.
+- `D-18` Mobile có **hai vai trò độc lập**: client (mở web điều khiển Dell, đã có từ v1) và managed target (chỉ khi đã đăng ký companion agent). Tailscale đã cài trên điện thoại/tablet là **đường truyền**: không đồng nghĩa có agent, không phải phần mềm điều khiển màn hình.
+- `D-19` Lệnh tới thiết bị theo lifecycle `requested → delivered → acknowledged → applied | denied | failed | timed_out`. Chỉ `applied` mới là thành công. Desired và reported state luôn tách biệt.
+- `D-20` Agent chỉ hoạt động trong quyền OS do chủ thiết bị cấp: không root/jailbreak, không tự bật quyền nguy hiểm/debugging, không chạy ẩn. "Giữ màn hình sáng" khác "đánh thức màn hình đã khóa"; việc thứ hai không thuộc FR-08.
+- `D-21` Giữ modular monolith: device control là module trong FastAPI, không thêm microservice, broker hay tiến trình mới trên Dell (ADR-009).
+- `D-22` Thiết bị đích hiện tại là **2 máy Android (Xiaomi, Samsung)**. Owner không có Mac ⇒ **không làm agent iOS native**; iOS/iPadOS chỉ giữ ở mức thiết kế (hiển thị `unsupported` trung thực) cho tới khi có thiết bị.
+
 ## 4. Đề xuất kỹ thuật đang ở mức DRAFT
 
 - React + TypeScript + Vite; FastAPI + psutil.
@@ -66,6 +76,7 @@ Owner muốn tận dụng laptop Linux cũ làm server tại nhà 24/7 và tự 
 - Vite dev proxy; static frontend + FastAPI production; Tailscale Serve HTTPS.
 - Localhost ports dev: frontend 5173, backend 8000; có thể thay nếu bị chiếm.
 - Auth production phải có; cơ chế cụ thể chưa chốt.
+- M7D: agent kết nối ra server (heartbeat + long-poll), enroll bằng pairing code, store JSON trong `STATE_DIR`, TTL ~60 s/kết quả ~30 s, không tự gửi lại desired state khi thiết bị online trở lại; iOS/tablet đi đường web companion trước (`ARCHITECTURE.md` §4A).
 
 Các đề xuất này có thể sửa trước M1 nếu owner có lý do; AI không tự quyết định biến thành yêu cầu tuyệt đối.
 
@@ -79,6 +90,11 @@ Các đề xuất này có thể sửa trước M1 nếu owner có lý do; AI kh
 | O-04 | Muốn share desktop vật lý hay XFCE session ảo? Đề xuất phiên ảo | Trước nghiệm thu M3 |
 | O-05 | Cần gửi file giữa **các client** trực tiếp hay chỉ browser↔server? V1 browser↔server | Trước M4 |
 | O-06 | Có muốn theo dõi nhiều host trong dashboard v1 không? Mặc định 1 host Dell | Trước M7 |
+| O-07 | Đã biết model 2 máy (§2). Chỉ còn thiếu phiên bản Android/One UI của Tab S10 Lite (Cài đặt → Thông tin máy tính bảng → Thông tin phần mềm) | Trước M7D-0 |
+| O-08 | Agent Android: Kotlin native (đề xuất) hay công nghệ khác; cài sideload APK (đề xuất, không qua Play) hay qua Play Store? | Trước M7D-4 |
+| O-09 | Store registry/audit: JSON trong `STATE_DIR` (mặc định) hay SQLite? | Trước M7D-1 |
+| O-10 | ~~Có Mac để làm agent iOS native không?~~ **Đã chốt: không có Mac** (D-22) | — |
+| O-11 | Chu kỳ heartbeat, ngưỡng offline, TTL lệnh; có tự áp lại desired state khi thiết bị online trở lại không (mặc định không)? | Chốt sau M7D-0 |
 
 Không hỏi lại các điều đã chốt ở §3; nếu không có trả lời kịp thời thì làm theo safe default trong SPEC và ghi assumption.
 
@@ -92,6 +108,8 @@ Không hỏi lại các điều đã chốt ở §3; nếu không có trả lờ
 6. **Dừng/restart Tailscale/SSH từ app có thể tự khóa quyền truy cập.** Cấm ở v1.
 7. **Battery metric có lỗi.** 0% không có nghĩa một số đo pin khỏe; cần hiển thị `fault/unavailable`.
 8. **VNC on-demand.** Không chạy desktop vô ích khi hệ thống chỉ cần giám sát.
+9. **Tailscale online ≠ agent online.** Thiết bị có trong tailnet chưa chắc agent đang chạy; online/offline chỉ tính theo heartbeat của agent.
+10. **Gửi lệnh ≠ đã áp dụng.** Mobile OS có thể dừng agent, từ chối quyền hoặc trì hoãn; chỉ tin kết quả agent xác nhận.
 
 ## 7. Làm việc với Claude / Codex / Antigravity
 

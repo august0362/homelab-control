@@ -8,14 +8,14 @@
 | Mốc | Ưu tiên | Nội dung | Phụ thuộc | Done |
 |---|---|---|---|---|
 | **M0** | P0 | Chốt tài liệu đặc tả, kiến trúc, context, phạm vi | — | **Duyệt 2026-10-31** |
-| **M1** | P0 | Khởi tạo repo + frontend/backend chạy trên ASUS | M0 | Xong, chờ owner duyệt |
+| **M1** | P0 | Khởi tạo repo + frontend/backend chạy trên ASUS | M0 | **Duyệt 2026-10-31** |
 | **M2** | P0 | Dashboard metrics thật + realtime + trạng thái offline | M1 | Chưa |
 | **M2.5** | P0 | Auth owner (chốt O-02), bảo vệ `/api` trừ `/health`, CSRF/Origin | M1 | Chưa |
 | **M3** | P0 | Remote Desktop GUI Dell tích hợp trong web | M1, M2, M2.5 | Chưa |
 | **M4** | P1 | File Manager giới hạn quyền + upload/download | M1, M2.5 | Chưa |
 | **M5** | P1 | System Services, logs, thao tác allowlist | M1, M2.5 | Chưa |
 | **M6** | P0 | Production release trên Dell, Tailscale Serve, recovery/rollback | M2–M5 theo phạm vi release | Chưa |
-| **M7** | P2 | Nhiều thiết bị, **Android/tablet/iPhone/iPad là managed target**, capability adapters, alerts/history | Sau v1 | Hoãn |
+| **M7** | P2 | Nhiều thiết bị, **Android/tablet/iPhone/iPad là managed target**, capability adapters, alerts/history; M7D Mobile Background & Screen Control (FR-08) | Sau v1 (M6) | Hoãn |
 
 > Các milestone mô tả trình tự ưu tiên. Có thể có **MVP release** sau M2/M3 rồi triển khai Files/System sau; nếu đổi thứ tự thì cập nhật tài liệu trước.
 
@@ -50,8 +50,8 @@
 **Tiến độ**
 ```text
 Milestone: M1
-Status: DONE (chờ owner duyệt checkpoint 3)
-Commit: commit "M1: project bootstrap ..." trên branch navi (xem git log; chưa push)
+Status: DONE (owner duyệt 2026-10-31)
+Commit: 3875422 "M1: project bootstrap ..." + start.bat/stop.bat, branch navi
 Changes: backend/app (config, api/{health,system,errors}, services/{device,platform_adapter,status}, main, __main__),
          backend/tests, frontend/ (routes registry, components, 4 pages, coffee theme), scripts/*.ps1, README.md
 Tests: scripts\test.ps1 -> ruff OK, pytest 9 passed, vitest 6 passed, tsc + vite build OK
@@ -133,9 +133,32 @@ Next: M2
 - **M7A — Device registry + capabilities:** thêm ASUS/Windows, nhiều Linux; điện thoại/tablet xuất hiện như **thiết bị đích**, không chỉ trình duyệt để điều khiển Dell.
 - **M7B — Mobile integration:** đánh giá Android (agent/ADB/scrcpy + quyền truy cập), iOS/iPadOS (chức năng được OS cho phép); theo dõi/truyền file/chia sẻ màn hình/remote input chỉ triển khai khi đã kiểm thử thực tế.
 - **M7C — Reliability & UX:** lịch sử > 10 phút (SQLite nếu cần), cảnh báo offline/nhiệt độ, notification; tùy chọn chia sẻ màn hình vật lý.
+- **M7D — Mobile Background & Screen Control (FR-08):** chi tiết ở dưới.
 - Không cam kết Android/iOS có cùng mức độ điều khiển, không truy cập thiết bị ẩn và không phá bảo vệ OS.
 - **Nghiệm thu M7:** danh sách nhiều thiết bị; UI căn cứ capabilities; chức năng điều khiển phải có quyền được cấp, hủy phiên được, thử trên phần cứng thật.
 - Giải quyết CMOS/UPS/remote KVM là **hạ tầng phần cứng**, không phải milestone sửa code.
+
+### M7D — Mobile Background & Screen Control (FR-08)
+
+**Phụ thuộc:** M2.5 (auth owner, CSRF), M6 (server Dell chạy qua Tailscale Serve để agent kết nối tới; backend dev chỉ chạy ở loopback trên ASUS), M7A (device registry, enrollment). Không phụ thuộc M7B (screen_view/remote_input).
+
+| Subtask | Nội dung | Kiểm thử chính |
+|---|---|---|
+| M7D-0 | Spike trên thiết bị thật: ghi model/phiên bản OS (O-07), kiểm chứng từng ô trong bảng `ARCHITECTURE.md` §4A.5 bằng app/trang thử nhỏ; cập nhật bảng thành "đã xác minh/không khả thi" | Ghi chép + ảnh chụp đã làm mờ; chưa merge code sản phẩm |
+| M7D-1 | Backend `device_control`: model lệnh, state machine, TTL/timeout, desired/reported, audit; API §4A.3 | pytest: mọi chuyển trạng thái hợp lệ/không hợp lệ, hết hạn, kết quả đến muộn, lệnh trùng `command_id`, token thu hồi, sai thiết bị, capability không `supported` |
+| M7D-2 | UI Devices: danh sách online/offline, control state theo §4A.4, nút bật/tắt chỉ khi `supported`, hiển thị "đang chờ thiết bị" | vitest: hàm suy ra control state; không có đường nào hiện "thành công" trước `applied` |
+| M7D-3 | Web companion: tablet dashboard mode + `keep_screen_awake` bằng Screen Wake Lock API | Test trên tablet thật qua HTTPS tailnet (AT-M7-08) |
+| M7D-4 | Android companion agent (O-08): enroll, heartbeat, long-poll, foreground service, giữ sáng | Test trên Android thật (AT-M7-05/06/07/11), đo hao pin và RAM Dell |
+| M7D-5 | iOS/iPadOS: báo `unsupported` trung thực. **Tạm hoãn**: không có Mac và không có thiết bị iOS (D-22) | AT-M7-09 khi có iPhone/iPad |
+
+Trên ASUS có thể chạy agent giả lập trong pytest, ghi rõ là **test double**. Kết quả từ agent giả lập không được tính là nghiệm thu thiết bị.
+
+**Acceptance (trên thiết bị thật)**
+- AT-M7-05..08, 10, 11 trong `SPEC.md` đạt trên **cả máy Xiaomi và máy Samsung** của owner; ghi model/phiên bản OS cho từng kết quả. AT-M7-09 (iOS) hoãn theo D-22.
+- Không có trạng thái `applied`/`enabled` nào hiển thị khi agent chưa xác nhận.
+- Thu hồi thiết bị trên web ⇒ agent mất quyền ngay; gỡ app trên thiết bị ⇒ UI chuyển `offline`.
+- RAM/CPU Dell không tăng đáng kể khi có 2–3 thiết bị heartbeat; không có tiến trình/cổng mới trên Dell.
+- Tính năng nào chưa xác minh được thì vẫn để `unsupported`/`not_configured`, không ghi là xong.
 
 ## Tiến độ cập nhật cho mỗi mốc
 
