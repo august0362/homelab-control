@@ -68,6 +68,7 @@ def test_health_public_rest_needs_session(anon):
         assert res.json() == {"code": "unauthorized", "message": "Sign in to continue."}
     assert anon.get("/api/auth/session").json() == {
         "authenticated": False,
+        "login_required": True,
         "configured": True,
         "expires_at": None,
     }
@@ -192,6 +193,46 @@ def test_allowed_origins(cfg):
 
 def test_write_needs_session(anon):
     assert patch(anon, "x").status_code == 401
+
+
+# --- dev on loopback needs no login (D-25) ---------------------------------------
+
+LOCAL = "http://127.0.0.1:8000"
+
+
+def test_dev_on_loopback_is_open(cfg):
+    client = TestClient(
+        create_app(replace(cfg, owner_password_hash=None)), base_url=LOCAL
+    )
+    assert client.get("/api/system").status_code == 200
+    assert (
+        client.get("/api/metrics", headers={"Host": "localhost:5173"}).status_code
+        == 200
+    )
+    assert client.get("/api/auth/session").json() == {
+        "authenticated": True,
+        "login_required": False,
+        "configured": False,
+        "expires_at": None,
+    }
+    # Writes still need Origin + JSON.
+    assert patch(client, "x", {}).status_code == 403
+    assert patch(client, "Laptop", {"Origin": LOCAL}).status_code == 200
+
+
+def test_dns_rebinding_host_is_not_open(cfg):
+    client = TestClient(create_app(cfg), base_url=LOCAL)
+    res = client.get("/api/system", headers={"Host": "evil.example:8000"})
+    assert res.status_code == 401
+
+
+@pytest.mark.parametrize(
+    "changes", [{"machine_role": "production"}, {"host": "0.0.0.0"}]
+)
+def test_login_required_outside_dev_loopback(cfg, changes):
+    client = TestClient(create_app(replace(cfg, **changes)), base_url=LOCAL)
+    assert client.get("/api/system").status_code == 401
+    assert client.get("/api/auth/session").json()["login_required"] is True
 
 
 # --- device rename (D-24) -------------------------------------------------------

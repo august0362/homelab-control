@@ -97,7 +97,8 @@ Next: M2.5
 
 **Task**
 - `scripts\set-password.ps1` (gọi `python -m app set-password`): nhập mật khẩu ẩn, ghi `OWNER_PASSWORD_HASH` (scrypt) vào `backend/.env`; không in, không log mật khẩu.
-- `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`; cookie ký HMAC 30 ngày, secret sinh một lần trong `STATE_DIR`.
+- `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`; cookie ký HMAC 1 năm (D-25), secret sinh một lần trong `STATE_DIR`.
+- Dev trên ASUS (role `dev` + bind loopback + Host loopback): không cần đăng nhập, không hiện Logout (D-25).
 - Mọi `/api/*` trừ `/api/health`, `/api/auth/*` trả `401 {code, message}` khi chưa đăng nhập.
 - Request ghi (POST/PUT/PATCH/DELETE): kiểm tra `Origin` khớp host + bắt buộc `application/json`; sai ⇒ `403`.
 - Sai mật khẩu 5 lần ⇒ `429` trong 60 s.
@@ -105,7 +106,8 @@ Next: M2.5
 - UI: trang Login, nút Logout, 401 ở bất kỳ request nào ⇒ về Login; sửa tên tại thẻ Device.
 
 **Acceptance**
-- Chưa đăng nhập: `/api/health` 200; `/api/system`, `/api/metrics` 401. Đăng nhập xong: dashboard như M2.
+- Dev trên ASUS mở thẳng Dashboard, không hỏi mật khẩu; Host lạ/`production`/bind ra ngoài vẫn bắt đăng nhập.
+- Chưa đăng nhập (ngoài dev loopback): `/api/health` 200; `/api/system`, `/api/metrics` 401. Đăng nhập xong: dashboard như M2.
 - Restart backend: vẫn đăng nhập. Đổi mật khẩu: session cũ bị đá ra.
 - Request ghi khác Origin ⇒ 403; sai 5 lần ⇒ 429.
 - Đổi tên ⇒ topbar, Dashboard và `/api/metrics` hiện tên mới, giữ sau restart; "về mặc định" trả lại `DEVICE_LABEL`/hostname.
@@ -115,7 +117,7 @@ Next: M2.5
 ```text
 Milestone: M2.5
 Status: Chờ owner duyệt (code + test xong 2026-10-31)
-Commit: "M2.5: owner login, CSRF/Origin, device rename", branch navi (chưa push)
+Commit: ac33e7b "M2.5: owner login, CSRF/Origin, device rename" + "M2.5: no login in dev on loopback (D-25), 1-year session", branch navi (chưa push)
 Changes: backend/app/services/auth.py (scrypt, cookie "<expires>.<hmac>", key = STATE_DIR/session_secret + hash, khóa 5 lần/60 s),
          api/guard.py (middleware duy nhất: Origin + JSON cho request ghi, rồi session; chỉ /api/health, /api/auth/* public),
          api/auth.py (login/logout/session), api/device.py (PATCH /api/device), services/device.py (device.json, label_source),
@@ -123,8 +125,10 @@ Changes: backend/app/services/auth.py (scrypt, cookie "<expires>.<hmac>", key = 
          __main__.py (python -m app set-password), scripts/set-password.ps1, .env.example;
          frontend: App = cổng session (không poll API bảo vệ trước khi login), Shell.tsx (app cũ + 401 -> Login, Logout),
          pages/Login.tsx, components/DeviceName.tsx (đổi tên inline, Reset khi label_source=custom), lib/label.ts,
-         api/client.ts (sendJson, 401 -> unauthorized), vite.config.ts (proxy changeOrigin:false để giữ Host)
-Tests: scripts\test.ps1 -> ruff OK, pytest 54 passed, vitest 15 passed, tsc + vite build OK
+         api/client.ts (sendJson, 401 -> unauthorized), vite.config.ts (proxy changeOrigin:false để giữ Host);
+         D-25: Auth.open_to() (dev + bind loopback + Host loopback = không cần session), session trả login_required,
+         ẩn Logout khi không cần đăng nhập, cookie 1 năm, config.is_loopback dùng chung
+Tests: scripts\test.ps1 -> ruff OK, pytest 58 passed, vitest 15 passed, tsc + vite build OK
 Evidence: ASUS: chưa có mật khẩu -> Login báo "No owner password set yet" + lệnh set-password, login 503;
           mật khẩu tạm -> /api/health 200, /api/system 401 khi chưa login; login 204 -> Dashboard Live như M2;
           sai 5 lần -> lần 6 trả 429 (Retry-After: 60), đúng mật khẩu cũng 429 trong lúc khóa;
@@ -132,10 +136,13 @@ Evidence: ASUS: chưa có mật khẩu -> Login báo "No owner password set yet"
           PATCH Origin lạ / thiếu Origin / form-encoded -> 403; qua Vite dev proxy cùng origin -> 200;
           đổi tên "Dell thử nghiệm ☕" -> topbar, Dashboard, /api/metrics cập nhật, giữ sau restart; Reset -> "this ASUS" (env);
           Logout -> Login; 360px Login và form đổi tên không tràn ngang. Log backend không có mật khẩu/hash/cookie.
-          Mật khẩu tạm đã xóa khỏi backend/.env sau khi test: owner tự chạy set-password.ps1.
+          Mật khẩu tạm đã xóa khỏi backend/.env sau khi test.
+          D-25: ASUS dev không đặt mật khẩu -> mở thẳng Dashboard, không có nút Logout; Host lạ -> 401.
 Risks: Host/Origin sau Tailscale Serve chưa kiểm (M6); nếu Serve đổi Host thì thêm URL Serve vào ALLOWED_ORIGINS.
        Khóa đăng nhập tính chung (một owner; sau Serve mọi request đều từ 127.0.0.1), nên người khác trong tailnet có thể
        làm owner phải chờ 60 s. Đổi mật khẩu cần restart backend (hash đọc lúc khởi động).
+       D-25: tiến trình khác trên chính ASUS gọi được API dev (chấp nhận: máy chỉ owner dùng); lên Dell phải để
+       MACHINE_ROLE=production, nếu không thì Tailscale Serve (gọi tới 127.0.0.1) sẽ lọt qua chế độ mở -> kiểm ở M6.
 Next: M3
 ```
 

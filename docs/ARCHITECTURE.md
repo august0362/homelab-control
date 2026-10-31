@@ -250,7 +250,7 @@ Agent iOS native cần macOS + Xcode + Apple ID/Developer Program; owner không 
 ## 6. Security boundaries
 
 1. **Network:** chỉ tailnet HTTPS qua Tailscale Serve; không router forwarding; backend và VNC bind localhost.
-2. **Identity:** **đã chốt (D-23): mật khẩu owner trong app**, hash scrypt, session cookie ký HMAC 30 ngày, SameSite=Strict, kiểm tra Origin cho request ghi, khóa 60 s sau 5 lần sai. Trước khi chốt, yêu cầu là: owner cần cơ chế xác thực đáng tin cậy trong app hoặc thông qua Tailscale identity được kiểm chứng chặt chẽ; không tin header tự gửi từ client, không tin `X-Forwarded-*` tùy tiện. Nếu dùng headers Tailscale, chỉ chấp nhận khi backend không thể bị gọi bỏ qua reverse proxy.
+2. **Identity:** **đã chốt (D-23): mật khẩu owner trong app**, hash scrypt, session cookie ký HMAC 1 năm, SameSite=Strict, kiểm tra Origin cho request ghi, khóa 60 s sau 5 lần sai. Dev trên ASUS (role `dev` + bind loopback + Host loopback) không cần đăng nhập (D-25). Trước khi chốt, yêu cầu là: owner cần cơ chế xác thực đáng tin cậy trong app hoặc thông qua Tailscale identity được kiểm chứng chặt chẽ; không tin header tự gửi từ client, không tin `X-Forwarded-*` tùy tiện. Nếu dùng headers Tailscale, chỉ chấp nhận khi backend không thể bị gọi bỏ qua reverse proxy.
 3. **Authorization:** metrics/read-only có thể đơn giản nhưng nên bảo vệ app; files & service actions phải xác thực, validate resource, CSRF/Origin tương ứng.
 4. **Filesystem:** root allowlist, resolve realpath rồi kiểm tra containment; cấm symlink bypass. Chặn upload file quá giới hạn; sanitize file name.
 5. **Process:** không gọi shell từ request. Nếu cần điều khiển vài service, dùng wrapper được kiểm soát (policykit/sudoers hẹp) và ghi audit; không cấp sudo toàn backend.

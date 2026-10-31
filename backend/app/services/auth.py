@@ -1,5 +1,8 @@
 """Owner login (D-23): scrypt password hash, stateless signed session cookie, lockout.
 
+Dev on the ASUS (MACHINE_ROLE=dev, bound to loopback) needs no login (D-25): only
+that machine can reach it. Everywhere else the owner signs in once per device.
+
 The cookie is "<expires_unix>.<hmac>". The HMAC key mixes a secret kept in
 STATE_DIR with the password hash, so sessions survive a restart but a new
 password signs every device out. Nothing here ever logs a password or token.
@@ -15,11 +18,12 @@ import secrets
 import threading
 import time
 from collections.abc import Callable
+from urllib.parse import urlsplit
 
-from app.config import Settings
+from app.config import Settings, is_loopback
 
 COOKIE = "hlc_session"
-SESSION_TTL = 30 * 24 * 3600  # seconds
+SESSION_TTL = 365 * 24 * 3600  # seconds; one login per device per year
 MIN_PASSWORD_LENGTH = 10
 MAX_FAILURES = 5
 LOCKOUT_SECONDS = 60
@@ -76,6 +80,7 @@ class Auth:
 
     def __init__(self, cfg: Settings, clock: Callable[[], float] = time.time) -> None:
         self.password_hash = cfg.owner_password_hash
+        self.login_required = not (cfg.machine_role == "dev" and is_loopback(cfg.host))
         self.secure_cookie = cfg.machine_role == "production"
         self._clock = clock
         self._key = (
@@ -92,6 +97,14 @@ class Auth:
     @property
     def configured(self) -> bool:
         return self._key is not None
+
+    def open_to(self, host_header: str) -> bool:
+        """True when this request needs no login: dev on loopback, addressed by a
+        loopback name. The Host check stops a website that points its own domain
+        at 127.0.0.1 (DNS rebinding) from reading the API."""
+        if self.login_required:
+            return False
+        return is_loopback(urlsplit(f"//{host_header}").hostname or "")
 
     def locked_for(self) -> int:
         """Seconds left on the lockout, 0 when logins are allowed."""

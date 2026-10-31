@@ -1,4 +1,5 @@
-"""The single gate in front of /api (D-23): CSRF checks on writes, then the owner session.
+"""The single gate in front of /api (D-23): CSRF checks on writes, then the owner session
+(skipped only in dev on loopback, D-25).
 
 A middleware rather than per-route checks, so a new route is protected by default
 and unknown /api paths reveal nothing to anonymous callers.
@@ -45,11 +46,12 @@ def register_guard(app: FastAPI) -> None:
             return error_response(
                 403, "forbidden_origin", "Cross-origin or non-JSON write rejected."
             )
+        auth = request.app.state.auth
         public = path == PUBLIC_PATH or path.startswith(PUBLIC_PREFIX)
         if (
             not public
-            and request.app.state.auth.session_expiry(request.cookies.get(COOKIE))
-            is None
+            and not auth.open_to(request.headers.get("host", ""))
+            and auth.session_expiry(request.cookies.get(COOKIE)) is None
         ):
             return error_response(401, "unauthorized", "Sign in to continue.")
         return await call_next(request)

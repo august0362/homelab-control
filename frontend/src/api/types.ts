@@ -17,6 +17,7 @@ export interface Device {
 
 export interface Session {
   authenticated: boolean;
+  login_required: boolean; // false = dev on this machine (D-25): no login, no Logout button
   configured: boolean; // false = no owner password set yet
   expires_at: string | null;
 }

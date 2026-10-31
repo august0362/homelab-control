@@ -37,7 +37,7 @@ cd backend;  .\.venv\Scripts\python -m app --reload   # API on 127.0.0.1:8000
 cd frontend; npm run dev                               # UI on 127.0.0.1:5173, proxies /api
 ```
 
-**First run:** setup does not set a password, so nobody can sign in until the owner runs `set-password.ps1` once. It asks twice (hidden, at least 10 characters) and writes only a scrypt hash to `backend/.env`. Running it again changes the password and signs every device out.
+**Password:** not needed for dev on the ASUS (D-25). On the Dell (M6, `MACHINE_ROLE=production`) nobody can sign in until the owner runs `set-password.ps1` once; each device then stays signed in for a year. It asks twice (hidden, at least 10 characters) and writes only a scrypt hash to `backend/.env`. Running it again changes the password and signs every device out.
 
 ## URLs
 
@@ -60,19 +60,19 @@ Copy `backend/.env.example` to `backend/.env` (setup does this). Never commit `.
 | `FRONTEND_DIST` | `../frontend/dist` | Built UI served on the same origin when it has `index.html` |
 | `STATE_DIR` | `.state` | Local state (gitignored) |
 | `LOG_LEVEL` | `info` | Uvicorn log level |
-| `OWNER_PASSWORD_HASH` | empty | scrypt hash written by `set-password.ps1`. Empty = login disabled (no bypass) |
+| `OWNER_PASSWORD_HASH` | empty | scrypt hash written by `set-password.ps1`. Empty = nobody can log in (dev on this machine needs no login anyway) |
 | `ALLOWED_ORIGINS` | empty | Extra origins allowed to send writes, comma-separated (e.g. the Tailscale Serve URL in M6) |
 
 Frontend: `frontend/.env` may set `VITE_API_PROXY_TARGET` (dev proxy target, default `http://127.0.0.1:8000`).
 
 ## API
 
-Everything under `/api` except `/api/health` and `/api/auth/*` needs the session cookie (`401 unauthorized` otherwise). Writes (POST/PUT/PATCH/DELETE) also need an `Origin` matching the host (or `ALLOWED_ORIGINS`) and `Content-Type: application/json`, else `403 forbidden_origin`.
+Everything under `/api` except `/api/health` and `/api/auth/*` needs the session cookie (`401 unauthorized` otherwise), except in dev on this machine: with `MACHINE_ROLE=dev`, a loopback `HOST` and a loopback URL (`127.0.0.1`/`localhost`), no login is needed (D-25). Writes (POST/PUT/PATCH/DELETE) also need an `Origin` matching the host (or `ALLOWED_ORIGINS`) and `Content-Type: application/json`, else `403 forbidden_origin`.
 
 - `GET /api/health` → `{status, timestamp, version}` (public)
-- `POST /api/auth/login {password}` → `204` + `hlc_session` cookie (HttpOnly, SameSite=Strict, 30 days; Secure in production) · `401 invalid_credentials` · `429 too_many_attempts` (5 misses → 60 s) · `503 auth_not_configured`
+- `POST /api/auth/login {password}` → `204` + `hlc_session` cookie (HttpOnly, SameSite=Strict, 1 year; Secure in production) · `401 invalid_credentials` · `429 too_many_attempts` (5 misses → 60 s) · `503 auth_not_configured`
 - `POST /api/auth/logout` → `204`, clears the cookie
-- `GET /api/auth/session` → `{authenticated, configured, expires_at}` (public)
+- `GET /api/auth/session` → `{authenticated, login_required, configured, expires_at}` (public)
 - `PATCH /api/device {label: string | null}` → the device object. 1–40 characters, no control characters (`422 invalid_label`); `null` = back to `DEVICE_LABEL` / hostname. `device.label_source` is `custom | env | hostname`.
 - `GET /api/system` → `{timestamp, device, os, hardware, app, capabilities}`
 - `GET /api/metrics` → `{timestamp, device, cpu, memory, swap, disk, network, uptime_seconds, sensors{temperature, fans, battery, ac}}`. Each group is `{status, data, message}` with `status` = `ok | unsupported | unavailable | error`; `data` is `null` unless `ok` (no fake zeros). Network is bytes/s from counter deltas. The UI polls every 2 s and keeps 10 min in browser memory.

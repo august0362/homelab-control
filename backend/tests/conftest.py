@@ -12,6 +12,7 @@ from app.services.auth import hash_password
 PASSWORD = "correct horse battery"
 PASSWORD_HASH = hash_password(PASSWORD)
 ORIGIN = {"Origin": "http://testserver"}  # TestClient's Host
+# "testserver" is not a loopback name, so these clients must sign in like a phone would.
 
 
 def login(client: TestClient, password: str = PASSWORD):
@@ -27,6 +28,7 @@ def cfg(tmp_path):
         device_label=None,
         frontend_dist=None,
         machine_role="dev",
+        host="127.0.0.1",  # dev on loopback: open only to loopback Host (D-25)
         owner_password_hash=PASSWORD_HASH,
         allowed_origins=(),
     )

@@ -5,7 +5,7 @@ interface TopbarProps {
   system: SystemInfo | null;
   menuOpen: boolean;
   onToggleMenu: () => void;
-  onLogout: () => void;
+  onLogout?: () => void; // omitted when no login is needed (dev on this machine)
 }
 
 export function Topbar({ system, menuOpen, onToggleMenu, onLogout }: TopbarProps) {
@@ -39,10 +39,12 @@ export function Topbar({ system, menuOpen, onToggleMenu, onLogout }: TopbarProps
         ) : (
           <span className="topbar-label muted">No device info</span>
         )}
-        <button className="btn logout-btn" onClick={onLogout} aria-label="Log out" title="Log out">
-          <Icon name="logout" size={16} />
-          <span className="logout-text">Log out</span>
-        </button>
+        {onLogout && (
+          <button className="btn logout-btn" onClick={onLogout} aria-label="Log out" title="Log out">
+            <Icon name="logout" size={16} />
+            <span className="logout-text">Log out</span>
+          </button>
+        )}
       </div>
     </header>
   );

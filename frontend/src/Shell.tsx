@@ -15,7 +15,7 @@ const HEALTH_MS = 5_000;
 const SYSTEM_MS = 60_000; // static info; refreshed rarely
 
 /** The signed-in app. Mounted only with a session, so protected polling never starts before login. */
-export function Shell({ onSignedOut }: { onSignedOut: () => void }) {
+export function Shell({ onSignedOut, canLogout }: { onSignedOut: () => void; canLogout: boolean }) {
   const path = useHashPath();
   const [menuOpen, setMenuOpen] = useState(false);
   const health = usePolling<Health>("/api/health", HEALTH_MS);
@@ -58,7 +58,7 @@ export function Shell({ onSignedOut }: { onSignedOut: () => void }) {
         system={info}
         menuOpen={menuOpen}
         onToggleMenu={() => setMenuOpen((o) => !o)}
-        onLogout={logout}
+        onLogout={canLogout ? logout : undefined}
       />
       <Sidebar
         currentPath={route.path}

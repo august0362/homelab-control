@@ -51,7 +51,7 @@ Phân biệt **desktop ảo** (một session Xvnc/XFCE của Dell) với **máy 
 ### FR-05 — Truy cập, bảo mật và thiết bị (P0)
 - `FR-05.1`: ASUS dev bind frontend/backend vào `127.0.0.1`; dev không tự mở cổng cho LAN.
 - `FR-05.2`: Dell production bind API vào `127.0.0.1` và xuất bản HTTPS bằng **Tailscale Serve** trong tailnet; không dùng Funnel.
-- `FR-05.3`: Có lớp xác thực chủ sở hữu và kiểm soát session/quyền trước khi cho phép các hành động quản trị; tailnet **không tự động thay thế** phân quyền app. **Đã chốt (D-23):** mật khẩu riêng của app, session cookie 30 ngày; mọi `/api/*` trừ `/api/health` và `/api/auth/*` cần đăng nhập.
+- `FR-05.3`: Có lớp xác thực chủ sở hữu và kiểm soát session/quyền trước khi cho phép các hành động quản trị; tailnet **không tự động thay thế** phân quyền app. **Đã chốt (D-23):** mật khẩu riêng của app, session cookie 1 năm (D-25); mọi `/api/*` trừ `/api/health` và `/api/auth/*` cần đăng nhập. Ngoại lệ D-25: dev trên ASUS bind loopback, truy cập qua tên loopback ⇒ không cần đăng nhập.
 - `FR-05.4`: Chống CSRF cho action có tác dụng thay đổi trạng thái khi dùng cookie/session; validate Origin/WebSocket; rate-limit nếu phù hợp.
 - `FR-05.5`: Không lưu token, mật khẩu, key vào repo hoặc log; có `.env.example` và file secrets riêng không commit.
 - `FR-05.6`: Responsive ở desktop/tablet/mobile; smartphone truy cập remote GUI có thể khó thao tác do màn hình nhỏ nhưng phải dùng được tối thiểu.
@@ -128,7 +128,7 @@ GET  /api/health           -> {status, timestamp, version}
 GET  /api/system           -> {timestamp, device, os, hardware, capabilities}
 POST /api/auth/login       -> {password} -> 204 + session cookie | 401 | 429 (M2.5)
 POST /api/auth/logout      -> 204, xóa cookie (M2.5)
-GET  /api/auth/session     -> {authenticated, configured, expires_at?} (public, M2.5)
+GET  /api/auth/session     -> {authenticated, login_required, configured, expires_at?} (public, M2.5; login_required=false = dev loopback, D-25)
 PATCH /api/device          -> {label: string | null} -> device; null = về mặc định (M2.5, owner + CSRF)
 GET  /api/metrics          -> {timestamp, device, cpu, memory, swap, disk, network, uptime_seconds, sensors{temperature, fans, battery, ac}}
 GET  /api/desktop/status   -> {status, session, connection_url?}

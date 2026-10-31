@@ -5,25 +5,15 @@ from __future__ import annotations
 
 import argparse
 import getpass
-import ipaddress
 import logging
 import sys
 
 import uvicorn
 
-from app.config import BACKEND_DIR, set_env_value, settings
+from app.config import BACKEND_DIR, is_loopback, set_env_value, settings
 from app.services.auth import MIN_PASSWORD_LENGTH, hash_password
 
 log = logging.getLogger("app")
-
-
-def _is_loopback(host: str) -> bool:
-    if host == "localhost":
-        return True
-    try:
-        return ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        return False
 
 
 def set_password() -> int:
@@ -52,7 +42,7 @@ def main() -> None:
     if args.command == "set-password":
         sys.exit(set_password())
 
-    if not _is_loopback(settings.host):
+    if not is_loopback(settings.host):
         log.warning(
             "HOST=%s is not loopback; remote access should go through Tailscale Serve.",
             settings.host,

@@ -69,8 +69,10 @@ def logout(request: Request, response: Response) -> None:
 def session(request: Request) -> dict[str, Any]:
     auth = request.app.state.auth
     expires = auth.session_expiry(request.cookies.get(COOKIE))
+    open_ = auth.open_to(request.headers.get("host", ""))
     return {
-        "authenticated": expires is not None,
+        "authenticated": open_ or expires is not None,
+        "login_required": not open_,
         "configured": auth.configured,
         "expires_at": _iso(expires) if expires else None,
     }
