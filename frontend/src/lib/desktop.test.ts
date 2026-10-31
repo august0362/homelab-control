@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { desktopStatusView, desktopWsUrl, keysymFor } from "./desktop";
+import { clampBox, defaultBox, desktopStatusView, desktopWsUrl, keysymFor } from "./desktop";
 
 describe("desktopStatusView", () => {
   it("maps every server state", () => {
@@ -40,5 +40,20 @@ describe("keysymFor", () => {
   it("ignores control characters", () => {
     expect(keysymFor("\n")).toBeNull();
     expect(keysymFor("")).toBeNull();
+  });
+});
+
+describe("floating panel geometry", () => {
+  it("starts bottom-right and fits a phone", () => {
+    expect(defaultBox(1400, 900)).toEqual({ x: 744, y: 440, w: 640, h: 444 });
+    const phone = defaultBox(360, 800);
+    expect(phone.w).toBe(344);
+    expect(phone.x).toBe(8);
+  });
+
+  it("keeps the panel on screen and above its minimum size", () => {
+    expect(clampBox({ x: -50, y: -20, w: 100, h: 50 }, 1400, 900)).toEqual({ x: 8, y: 8, w: 280, h: 200 });
+    expect(clampBox({ x: 1300, y: 850, w: 640, h: 400 }, 1400, 900)).toEqual({ x: 752, y: 492, w: 640, h: 400 });
+    expect(clampBox({ x: 0, y: 0, w: 5000, h: 5000 }, 1400, 900)).toEqual({ x: 8, y: 8, w: 1384, h: 884 });
   });
 });

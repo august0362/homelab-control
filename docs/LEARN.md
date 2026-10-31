@@ -87,9 +87,9 @@ frontend/src/
   Shell.tsx               khung app: topbar, sidebar, poll health/system/metrics
   routes.ts               danh sách trang (thêm trang ở đây là có menu)
   api/client.ts           fetchJson / sendJson, chuẩn hóa lỗi
-  hooks/                  usePolling, useMetrics, useSession, useVnc, usePopout
+  hooks/                  usePolling, useMetrics, useSession, useVnc, usePopout, useDesktopDock
   pages/                  Dashboard, RemoteDesktop, DesktopWindow, Files, System, Login
-  components/             Card, StatusBadge, Sidebar, Topbar, DeviceName, VncToolbar...
+  components/             Card, StatusBadge, Sidebar, Topbar, DeviceName, VncToolbar, LiveDesktop, FloatingDesktop...
   lib/                    hàm thuần có test: format, history, status, label, desktop
   styles/theme.css        token màu theme cà phê (D-13)
 deploy/linux/             script + unit cho Dell (desktop M3; service backend ở M6)
@@ -155,7 +155,8 @@ noVNC (trình duyệt) ──WebSocket /api/desktop/ws──► FastAPI (kiểm 
   - `running` khi socket trả lời đúng **banner RFB** (`RFB 003.008`). Chỉ mở được kết nối TCP thì chưa đủ, vì đường hầm SSH luôn nhận kết nối.
   - Badge: Starting / Running / Disconnected (viewer rớt trong khi server vẫn chạy) / Stopped / Error / Not configured.
 - **Bật/tắt:** unit `hlc-desktop` của systemd ở mức user, gọi bằng lệnh cố định `systemctl --user start|stop hlc-desktop` (D-15). Unit không có `[Install]`, nên **không thể tự bật lúc boot** (ADR-008: tiết kiệm RAM).
-- **Thanh công cụ:** Ctrl+Alt+Del, Esc, Tab, Keyboard (mở bàn phím điện thoại, mức cố gắng), Fullscreen, và **Pop out**: tách màn hình ra cửa sổ riêng; nút **Return to page** đưa nó về khung.
+- **Thanh công cụ:** Ctrl+Alt+Del, Esc, Tab, Keyboard (mở bàn phím điện thoại, mức cố gắng), Fullscreen, và **Pop out**: tách màn hình ra cửa sổ trình duyệt riêng; nút **Return to page** đưa nó về khung.
+- **Khung nổi:** bỏ tick **Docked in page** thì màn hình nhấc ra thành khung nổi trong app. Khung nằm trên mọi trang, kéo thanh tiêu đề để di chuyển, kéo góc để đổi cỡ, vị trí và cỡ được nhớ. Tick lại thì nó về nằm gọn trong trang. Khung nổi do `Shell` giữ (`useDesktopDock`), nên chuyển trang không làm mất kết nối.
 - **Đo trên Dell:** desktop tắt ~560 MiB RAM; bật thêm ~330–390 MiB; Xvnc ăn ~1–2 % CPU. Tắt thì trả lại hết RAM.
 - **Cấu hình** (`backend/.env`):
   - `DESKTOP_VNC`: `unix:/run/user/<uid>/hlc-vnc.sock` trên Dell, hoặc `tcp:127.0.0.1:5901` qua đường hầm.
@@ -263,7 +264,7 @@ Read first: docs/LEARN.md (overview), then docs/PROJECT_OVERVIEW.md, SPEC.md, AR
 MILESTONES.md, CONTEXT.md. The docs are the source of truth; decisions D-01..D-26 are final (do not re-ask).
 
 State: M0, M1, M2, M2.5 approved. M3 (Remote Desktop: noVNC page, backend WebSocket bridge to a TigerVNC
-Xvnc Unix socket, XFCE virtual session on the Dell, pop-out window) done and verified on the real Dell,
+Xvnc Unix socket, XFCE virtual session on the Dell, pop-out window, floating in-app panel with a "Docked in page" toggle) done and verified on the real Dell,
 waiting for owner approval. Next: M4 Files (needs O-01, O-05). Commits are local; the GitHub repo is
 PUBLIC: push only when the owner explicitly says "push".
 

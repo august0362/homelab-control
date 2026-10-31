@@ -197,6 +197,8 @@ Evidence B: Dell (Mint 22.3 XFCE, đã có sẵn XFCE): unit active, socket srw-
           metrics vẫn 200; tunnel lại -> "Disconnected" -> Reconnect -> Running. Stop desktop -> RAM 928 -> 569 MiB,
           0 tiến trình sót, ssh + tailscaled active, metrics 200 (AT-06). Pop out -> cửa sổ "Desktop: Dell" chỉ màn hình,
           Return to page -> cửa sổ đóng, khung kết nối lại; luôn 1 viewer.
+          Khung nổi (owner yêu cầu): bỏ tick "Docked in page" -> khung nổi trên mọi trang, sang Dashboard vẫn giữ
+          kết nối (0 kết nối mới), kéo được, đổi cỡ ở góc, nhớ vị trí; tick lại -> về trang Remote Desktop; 360px vừa khung.
           RAM: tắt ~560 MiB; bật ~890-950 MiB; đang xem ~940 MiB; CPU ~99 % idle, Xvnc ~1-2 %.
 Bug tìm thấy và sửa: TigerVNC blacklist chặn viewer sau 5 probe (mọi client socket chung địa chỉ) -> -UseBlacklist=0.
 Risks B: Lần đầu XFCE hiện Welcome + hộp thoại colord đòi mật khẩu (bấm Cancel). Không unit thì không phân biệt được

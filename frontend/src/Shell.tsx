@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { sendJson } from "./api/client";
 import type { Health, SystemInfo } from "./api/types";
+import { FloatingDesktop } from "./components/FloatingDesktop";
 import { Icon } from "./components/Icon";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBadge } from "./components/StatusBadge";
 import { Topbar } from "./components/Topbar";
+import { useDesktopDock } from "./hooks/useDesktopDock";
 import { useHashPath } from "./hooks/useHashPath";
 import { useMetrics } from "./hooks/useMetrics";
 import { usePolling } from "./hooks/usePolling";
@@ -21,6 +23,7 @@ export function Shell({ onSignedOut, canLogout }: { onSignedOut: () => void; can
   const health = usePolling<Health>("/api/health", HEALTH_MS);
   const system = usePolling<SystemInfo>("/api/system", SYSTEM_MS);
   const metrics = useMetrics();
+  const dock = useDesktopDock(); // here, so a floating desktop survives page changes
 
   // Session expired, or a new password signed every device out: back to Login.
   const expired = [system.error, metrics.error].some((e) => e?.code === "unauthorized");
@@ -85,8 +88,9 @@ export function Shell({ onSignedOut, canLogout }: { onSignedOut: () => void; can
             </button>
           </div>
         </header>
-        <Page system={system} health={health} metrics={metrics} />
+        <Page system={system} health={health} metrics={metrics} dock={dock} />
       </main>
+      {dock.floating && <FloatingDesktop onDock={dock.dock} />}
     </div>
   );
 }

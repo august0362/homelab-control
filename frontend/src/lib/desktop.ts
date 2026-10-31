@@ -39,3 +39,32 @@ export function keysymFor(ch: string): number | null {
 /** The detached desktop window (hash route outside the app shell) and its "back to the page" message. */
 export const POPOUT_PATH = "/desktop-window";
 export const RETURN_MESSAGE = "hlc-desktop:return";
+
+/** Floating desktop panel geometry (px, viewport coordinates). */
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+const MARGIN = 8;
+const MIN_W = 280;
+const MIN_H = 200;
+const BARS_H = 84; // title bar + key bar above the 16:9 screen
+
+/** Bottom-right corner, 640 px wide (or the screen width minus margins on a phone). */
+export function defaultBox(vw: number, vh: number): Box {
+  const w = Math.min(640, vw - 2 * MARGIN);
+  const h = Math.round((w * 9) / 16) + BARS_H;
+  return clampBox({ x: vw - w - 2 * MARGIN, y: vh - h - 2 * MARGIN, w, h }, vw, vh);
+}
+
+/** Keep the panel at least MIN size and fully on screen, so its title bar can always be grabbed. */
+export function clampBox(box: Box, vw: number, vh: number): Box {
+  const w = Math.min(Math.max(box.w, MIN_W), vw - 2 * MARGIN);
+  const h = Math.min(Math.max(box.h, MIN_H), vh - 2 * MARGIN);
+  const x = Math.min(Math.max(box.x, MARGIN), Math.max(MARGIN, vw - w - MARGIN));
+  const y = Math.min(Math.max(box.y, MARGIN), Math.max(MARGIN, vh - h - MARGIN));
+  return { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
+}

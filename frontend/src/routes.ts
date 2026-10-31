@@ -2,6 +2,7 @@
 import type { ComponentType } from "react";
 import type { Health, SystemInfo } from "./api/types";
 import type { IconName } from "./components/Icon";
+import type { DesktopDock } from "./hooks/useDesktopDock";
 import type { MetricsState } from "./hooks/useMetrics";
 import type { PollState } from "./hooks/usePolling";
 import { Dashboard } from "./pages/Dashboard";
@@ -13,6 +14,7 @@ export interface PageProps {
   system: PollState<SystemInfo>;
   health: PollState<Health>;
   metrics: MetricsState;
+  dock: DesktopDock;
 }
 
 export interface PageRoute {
