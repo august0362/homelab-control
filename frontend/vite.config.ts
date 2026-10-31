@@ -10,9 +10,10 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       proxy: {
-        // Keep the browser's Host: the backend's CSRF check compares it with Origin.
-        // (The string shorthand would set changeOrigin: true and rewrite Host.)
-        "/api": { target: env.VITE_API_PROXY_TARGET || "http://127.0.0.1:8000", changeOrigin: false },
+        // Keep the browser's Host: the backend's CSRF and WebSocket Origin checks compare it
+        // with Origin. (The string shorthand would set changeOrigin: true and rewrite Host.)
+        // ws: the remote desktop bridge at /api/desktop/ws.
+        "/api": { target: env.VITE_API_PROXY_TARGET || "http://127.0.0.1:8000", changeOrigin: false, ws: true },
       },
     },
   };

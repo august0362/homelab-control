@@ -10,6 +10,7 @@ from app.api.errors import register_error_handlers
 from app.api.guard import register_guard
 from app.config import APP_NAME, APP_VERSION, Settings, settings
 from app.services.auth import Auth
+from app.services.desktop import Desktop
 from app.services.metrics import MetricsCollector
 from app.services.platform_adapter import get_adapter
 
@@ -27,6 +28,7 @@ def create_app(cfg: Settings = settings) -> FastAPI:
     app.state.adapter = get_adapter()
     app.state.metrics = MetricsCollector(app.state.adapter)
     app.state.auth = Auth(cfg)
+    app.state.desktop = Desktop(cfg)
 
     register_error_handlers(app)
     register_guard(app)

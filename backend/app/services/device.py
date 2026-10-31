@@ -19,7 +19,7 @@ LABEL_MAX_LENGTH = 40
 CAPABILITY_STATUSES = {"supported", "unsupported", "not_configured", "requires_consent"}
 
 # Features whose backend lands in a later milestone.
-_PLANNED = {"desktop": "M3", "files": "M4", "services": "M5"}
+_PLANNED = {"files": "M4", "services": "M5"}
 _CAPABILITY_ORDER = (
     "metrics",
     "temperature",
@@ -104,11 +104,20 @@ def device_info(cfg: Settings, adapter: PlatformAdapter) -> dict[str, Any]:
     }
 
 
-def capabilities(adapter: PlatformAdapter) -> dict[str, dict[str, str | None]]:
+def capabilities(
+    adapter: PlatformAdapter, desktop_problem: str | None
+) -> dict[str, dict[str, str | None]]:
+    """desktop_problem: why the remote desktop is not configured; None = it is."""
     sensors = {"metrics": True, **adapter.sensor_support()}
     caps: dict[str, dict[str, str | None]] = {}
     for name in _CAPABILITY_ORDER:
-        if name in _PLANNED:
+        if name == "desktop":
+            caps[name] = (
+                {"status": "not_configured", "message": desktop_problem}
+                if desktop_problem
+                else {"status": "supported", "message": None}
+            )
+        elif name in _PLANNED:
             caps[name] = {
                 "status": "not_configured",
                 "message": f"Planned in {_PLANNED[name]}.",

@@ -811,3 +811,82 @@ button {
     padding: 22px;
   }
 }
+
+/* ---- Remote desktop (M3) ---- */
+.small {
+  font-size: 12px;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+
+.desktop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
+.vnc-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.vnc-toolbar {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Focus target that brings up a phone's keyboard; invisible but focusable. 16px stops iOS zoom. */
+.vnc-keyboard-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  font-size: 16px;
+  resize: none;
+  pointer-events: none;
+}
+
+.vnc-screen {
+  width: 100%;
+  aspect-ratio: 16 / 9; /* the session is 1280x720 */
+  max-height: 75vh;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.vnc-overlay {
+  position: absolute;
+  inset: 50% 0 auto;
+  text-align: center;
+}
+
+.vnc-frame:fullscreen {
+  margin: 0;
+  padding: 8px;
+  background: var(--bg);
+}
+
+.vnc-frame:fullscreen .vnc-screen {
+  flex: 1;
+  aspect-ratio: auto;
+  max-height: none;
+}

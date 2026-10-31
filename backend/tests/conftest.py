@@ -31,6 +31,9 @@ def cfg(tmp_path):
         host="127.0.0.1",  # dev on loopback: open only to loopback Host (D-25)
         owner_password_hash=PASSWORD_HASH,
         allowed_origins=(),
+        desktop_vnc=None,  # a local .env must not leak into tests
+        desktop_unit=None,
+        desktop_label=None,
     )
 
 

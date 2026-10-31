@@ -71,3 +71,14 @@ export interface Metrics {
     ac: Metric<{ online: boolean }>;
   };
 }
+
+export type DesktopState = "not_configured" | "stopped" | "starting" | "running" | "error";
+
+export interface DesktopStatus {
+  status: DesktopState;
+  message: string;
+  label: string; // whose screen it is, e.g. "Dell" while staging from the ASUS
+  can_control: boolean; // false = start/stop happens on the server (no DESKTOP_UNIT)
+  viewers: number;
+  connection_url: string | null; // WebSocket path, only while running
+}

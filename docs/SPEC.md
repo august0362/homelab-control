@@ -29,7 +29,7 @@ Phân biệt **desktop ảo** (một session Xvnc/XFCE của Dell) với **máy 
 ### FR-02 — Remote Desktop GUI (P0)
 - `FR-02.1`: Có trang Remote Desktop tích hợp trong web, dùng chuột, bàn phím, cuộn, fullscreen và cơ chế phím bổ trợ trên mobile nếu khả thi.
 - `FR-02.2`: Dell chạy một session **XFCE + TigerVNC Xvnc** ảo, độ phân giải mặc định thử nghiệm 1280×720.
-- `FR-02.3`: Browser dùng **noVNC** qua WebSocket bridge/websockify; VNC chỉ listen loopback trên Dell hoặc được tunnel an toàn.
+- `FR-02.3`: Browser dùng **noVNC** qua WebSocket bridge của backend (`/api/desktop/ws`, D-26, không websockify); VNC chỉ listen Unix socket trên Dell hoặc được tunnel an toàn.
 - `FR-02.4`: Có trạng thái Starting / Running / Disconnected / Stopped / Error; không hiển thị desktop giả như đang connected.
 - `FR-02.5`: Cho phép khởi chạy/dừng desktop theo quyền có giới hạn; giữ SSH độc lập để cứu hộ. **Terminal có trong GUI**, không có Web Terminal page riêng.
 - `FR-02.6`: Desktop ảo phải dùng chung filesystem, user và app Linux như SSH, nhưng là session đồ họa **khác** với màn hình vật lý.
@@ -131,9 +131,10 @@ POST /api/auth/logout      -> 204, xóa cookie (M2.5)
 GET  /api/auth/session     -> {authenticated, login_required, configured, expires_at?} (public, M2.5; login_required=false = dev loopback, D-25)
 PATCH /api/device          -> {label: string | null} -> device; null = về mặc định (M2.5, owner + CSRF)
 GET  /api/metrics          -> {timestamp, device, cpu, memory, swap, disk, network, uptime_seconds, sensors{temperature, fans, battery, ac}}
-GET  /api/desktop/status   -> {status, session, connection_url?}
-POST /api/desktop/start    -> auth + authorization required (M3)
-POST /api/desktop/stop     -> auth + authorization required (M3)
+GET  /api/desktop/status   -> {status, message, label, can_control, viewers, connection_url} (M3)
+POST /api/desktop/start    -> 204 | 409 desktop_unmanaged | 503 desktop_not_configured (owner + CSRF, M3)
+POST /api/desktop/stop     -> như start; đóng luôn các viewer đang mở (M3)
+WS   /api/desktop/ws       -> byte RFB browser <-> VNC; Origin + session kiểm lúc mở, sai -> đóng 1008 (M3, D-26)
 GET  /api/files/*          -> limited to configured roots (M4)
 GET  /api/services         -> allowlisted service statuses (M5)
 POST /api/services/{id}/restart -> disabled until M5 authorization verified
@@ -147,7 +148,7 @@ POST /api/services/{id}/restart -> disabled until M5 authorization verified
 - M7D (dự kiến, chốt khi làm): `GET /api/devices`, `POST /api/devices/{id}/commands` → `202 {command_id, status: "requested"}`, `GET /api/devices/{id}/commands/{command_id}`; nhóm `/api/agent/*` (enroll, heartbeat/state, lấy lệnh, ack, result) chỉ nhận token thiết bị. Xem `ARCHITECTURE.md` §4A.3.
 - `/api/metrics` không truyền password/token; field invalid/unsupported phải có trạng thái dễ nhận biết: mỗi nhóm là `{status, data, message}`, `status ∈ ok | unsupported | unavailable | error`, `data = null` khi không phải `ok`.
 - Error format ổn định (`code`, `message`, `request_id?`) để frontend xử lý.
-- `GET /api/desktop/status` có thể không có connection URL khi ngừng chạy; **không trả token xác thực VNC trong dữ liệu công khai**.
+- `GET /api/desktop/status`: `status ∈ not_configured | stopped | starting | running | error`; `running` = VNC trả banner RFB; `connection_url` chỉ có khi `running`; `can_control=false` khi không đặt `DESKTOP_UNIT` (start/stop làm trên server); `label` = máy sở hữu desktop. **Không trả token/mật khẩu VNC trong dữ liệu công khai**.
 
 ## 5. Acceptance criteria (AT)
 

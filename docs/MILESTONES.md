@@ -11,7 +11,7 @@
 | **M1** | P0 | Khởi tạo repo + frontend/backend chạy trên ASUS | M0 | **Duyệt 2026-10-31** |
 | **M2** | P0 | Dashboard metrics thật + realtime + trạng thái offline | M1 | **Duyệt 2026-10-31** |
 | **M2.5** | P0 | Đăng nhập mật khẩu owner (D-23), bảo vệ `/api` trừ `/health`, CSRF/Origin, đổi tên thiết bị (D-24) | M1 | **Duyệt 2026-10-31** |
-| **M3** | P0 | Remote Desktop GUI Dell tích hợp trong web | M1, M2, M2.5 | Chưa |
+| **M3** | P0 | Remote Desktop GUI Dell tích hợp trong web | M1, M2, M2.5 | Phần A xong, chờ phần B (Dell) |
 | **M4** | P1 | File Manager giới hạn quyền + upload/download | M1, M2.5 | Chưa |
 | **M5** | P1 | System Services, logs, thao tác allowlist | M1, M2.5 | Chưa |
 | **M6** | P0 | Production release trên Dell, Tailscale Serve, recovery/rollback | M2–M5 theo phạm vi release | Chưa |
@@ -151,7 +151,7 @@ Next: M3
 **Task**
 - React tích hợp core `@novnc/novnc`, keyboard/mouse/fullscreen/status.
 - Xây desktop manager API rõ ràng; dev ở ASUS dùng mock hoặc remote test target ghi nhãn.
-- Trên Dell: cài XFCE/TigerVNC/websockify với cấu hình loopback, user không phải root; start on demand.
+- Trên Dell: cài XFCE/TigerVNC, Xvnc chỉ nghe Unix socket (D-26, không websockify), user không phải root; start on demand.
 - WebSocket bridge có xác thực; thử xuyên Tailscale từ frontend ASUS tới Dell **không cần deploy toàn bộ app** (staging có kiểm soát).
 
 **Acceptance**
@@ -161,6 +161,31 @@ Next: M3
 - Đo RAM CPU khi mở và đóng GUI; có bước rescue SSH.
 
 **Rủi ro:** Test này bắt buộc có thời gian chạy dịch vụ trên Dell; không thể nghiệm thu chỉ bằng ASUS Windows.
+
+**Tiến độ**
+```text
+Milestone: M3
+Status: Phần A DONE trên ASUS (chưa nghiệm thu); phần B (Dell) chưa làm, cần owner có mặt
+Commit: "M3a: desktop API, authenticated VNC bridge, Remote Desktop page", branch navi (chưa push)
+Changes: backend/app/services/desktop.py (DESKTOP_VNC unix:/tcp loopback, probe banner RFB, systemctl --user argv cố định,
+         đếm/đóng viewer), api/desktop.py (status/start/stop + WS /api/desktop/ws, anyio task group, khung tối đa 1 MiB),
+         api/guard.py (denial() dùng chung HTTP + WebSocket), services/device.py (capability desktop thật),
+         config.py + .env.example (DESKTOP_VNC, DESKTOP_UNIT, DESKTOP_LABEL), __main__.py (hiện log app.*);
+         frontend: @novnc/novnc 1.7.0 (tải lười, chunk riêng), hooks/useVnc.ts, components/VncToolbar.tsx
+         (Ctrl+Alt+Del, Esc, Tab, Keyboard cho mobile, Fullscreen), pages/RemoteDesktop.tsx, lib/desktop.ts,
+         types/novnc.d.ts, vite.config.ts (proxy ws: true, vẫn changeOrigin:false)
+Tests: scripts\test.ps1 -> ruff OK, pytest 97 passed, vitest 20 passed, tsc + vite build OK
+Evidence: ASUS mặc định -> trang Remote Desktop "Not configured" + hướng dẫn README; capability desktop not_configured;
+          Dashboard/metrics vẫn Live như M2; 360px không tràn ngang.
+          PROTOCOL TEST (server RFB giả lập trong scratchpad, KHÔNG phải desktop, không commit): status running;
+          noVNC kết nối qua Vite proxy -> backend -> TCP loopback, server nhận Ctrl+Alt+Del/Tab/Esc và chuột;
+          server cắt phiên -> badge "Disconnected" -> Reconnect chạy; tắt server -> "stopped".
+          WS Origin lạ / thiếu Origin -> 403 (cả qua Vite proxy); Origin đúng -> 101; start/stop không unit -> 409.
+Risks: Session chỉ kiểm lúc mở WebSocket. Unix socket chưa chạy thật (ASUS là Windows) -> kiểm ở phần B/M6.
+       Hành vi WebSocket qua Tailscale Serve chưa kiểm (M6). Backend M6 phải chạy cùng user với Xvnc để mở socket.
+       Bàn phím mobile chỉ best effort (gõ chữ, Backspace, Enter). Probe banner mỗi 3 s khi mở trang -> Xvnc ghi log kết nối.
+Next: M3 phần B (Dell: deploy/linux/desktop-setup.sh, unit hlc-desktop, staging qua SSH tunnel, đo RAM/CPU, rescue)
+```
 
 ## M4 — File Manager
 

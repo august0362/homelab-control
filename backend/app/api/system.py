@@ -16,6 +16,11 @@ from app.services.device import capabilities, device_info
 router = APIRouter()
 
 
+def _desktop_problem(request: Request) -> str | None:
+    desktop = request.app.state.desktop
+    return None if desktop.target else desktop.problem
+
+
 @router.get("/system")
 def system(request: Request) -> dict[str, Any]:
     cfg = request.app.state.settings
@@ -40,5 +45,5 @@ def system(request: Request) -> dict[str, Any]:
             "version": APP_VERSION,
             "python": platform.python_version(),
         },
-        "capabilities": capabilities(adapter),
+        "capabilities": capabilities(adapter, _desktop_problem(request)),
     }

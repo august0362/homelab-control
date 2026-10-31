@@ -11,9 +11,8 @@ flowchart TB
     APP --> MET[Metrics adapter: psutil / sensors]
     APP --> FILES[Scoped files adapter]
     APP --> SVC[Allowlisted systemd services]
-    APP --> WS[Authorized WebSocket proxy]
-    WS -->|localhost| WEB[websockify]
-    WEB -->|localhost| VNC[TigerVNC Xvnc + XFCE]
+    APP --> WS[Authorized WebSocket bridge /api/desktop/ws]
+    WS -->|Unix socket 0600| VNC[TigerVNC Xvnc + XFCE]
     subgraph Dell_Linux_Production["Dell Linux production (RAM ~4 GB)"]
       TS
       APP
@@ -21,7 +20,6 @@ flowchart TB
       FILES
       SVC
       WS
-      WEB
       VNC
     end
 ```
@@ -76,11 +74,11 @@ Tailscale tailnet
  127.0.0.1:8000   FastAPI (systemd, non-root)
       |-- /          frontend/dist static (SPA fallback)
       |-- /api/*     API + auth + metrics + files + services
-      `-- /desktop-ws  authenticated WebSocket proxy
+      `-- /api/desktop/ws  WebSocket bridge (session + Origin, D-26)
                                 |
-                      127.0.0.1:6080 websockify
+                      /run/user/<uid>/hlc-vnc.sock (Unix socket, 0600)
                                 |
-                      127.0.0.1:5901 TigerVNC Xvnc :1
+                      TigerVNC Xvnc :1 (-rfbport -1: không cổng TCP)
                                 |
                            XFCE session
 ```
@@ -88,8 +86,8 @@ Tailscale tailnet
 - Static build tạo ở ASUS, chép lên Dell cùng backend code/config.
 - Backend chạy `127.0.0.1`, dưới user hạn chế, do systemd giám sát.
 - Xvnc không tự bật toàn thời gian nếu không cần; XFCE được khởi chạy trong session ảo và không yêu cầu monitor vật lý.
-- VNC và websockify chỉ bind loopback; kiểm tra lại bằng `ss -lntp` sau setup.
-- **Lưu ý WebSocket:** nếu proxy auth/route tùy chỉnh gây phức tạp, có thể dùng một reverse proxy nhỏ đã được kiểm thử hoặc một endpoint bridge riêng. Không được mở websockify thẳng ra WAN/tailnet như cách né khó. Giải pháp cuối phải được ghi lại khi M3 hoàn thành.
+- VNC không mở cổng TCP nào; kiểm tra lại bằng `ss -lntp` sau setup.
+- **Giải pháp WebSocket (D-26, M3):** không websockify. Backend tự làm cầu nối byte WebSocket ↔ VNC (`asyncio` + task group của anyio có sẵn trong Starlette), kiểm session + `Origin` trước khi accept (HTTP middleware không chạy cho WebSocket nên endpoint gọi chung hàm `denial()` của guard). Xvnc chỉ nghe Unix socket 0600 của user, nên `SecurityTypes None` chấp nhận được: chỉ user đó (và backend chạy cùng user, M6) mở được socket. Session chỉ kiểm lúc mở WebSocket; viewer đang mở chạy tới khi ngắt hoặc desktop bị Stop.
 
 ## 4. Components
 
@@ -100,7 +98,7 @@ Tailscale tailnet
 | `backend/services/metrics` | psutil + optional sensors; normalized metrics | Không lưu DB hay scan máy khác ở MVP |
 | `backend/services/files` | thao tác tệp trong configured roots | Không expose `/etc`, home root hay toàn disk |
 | `backend/services/system` | trạng thái dịch vụ allowlist và logs giới hạn | Không `sudo` tùy ý hoặc edit firewall |
-| `backend/services/desktop` | quản lý trạng thái session VNC và websockify | Không xử lý raw video encoding từ đầu |
+| `backend/services/desktop` | trạng thái VNC (banner RFB), start/stop unit `systemctl --user` argv cố định, đếm viewer; cầu nối ở `api/desktop.py` | Không xử lý raw video encoding, không websockify |
 | `deploy/linux` | systemd, env template, healthcheck, deploy/rollback docs | Không cấu hình lại BIOS hoặc thay đổi mạng bắt buộc |
 | `backend/services/devices` (M7) | Device registry, enrollment, heartbeat, capabilities của thiết bị đích | Không quét mạng/tailnet để tự thêm thiết bị |
 | `backend/services/device_control` (M7D) | Command lifecycle, desired/reported state, audit lệnh | Không gửi lệnh tự do/shell, không kết nối chủ động vào điện thoại |
@@ -254,7 +252,7 @@ Agent iOS native cần macOS + Xcode + Apple ID/Developer Program; owner không 
 3. **Authorization:** metrics/read-only có thể đơn giản nhưng nên bảo vệ app; files & service actions phải xác thực, validate resource, CSRF/Origin tương ứng.
 4. **Filesystem:** root allowlist, resolve realpath rồi kiểm tra containment; cấm symlink bypass. Chặn upload file quá giới hạn; sanitize file name.
 5. **Process:** không gọi shell từ request. Nếu cần điều khiển vài service, dùng wrapper được kiểm soát (policykit/sudoers hẹp) và ghi audit; không cấp sudo toàn backend.
-6. **Desktop:** VNC credential lưu ngoài Git; không hiển thị trên UI/log; WebSocket handshake authenticated. Session của GUI chạy với user thường.
+6. **Desktop:** VNC chỉ nghe Unix socket 0600 (D-26), không mật khẩu VNC nào trong Git/UI/log; WebSocket handshake kiểm session + Origin. Session của GUI chạy với user thường.
 7. **Observability:** log request failures, trạng thái services, desktop lifecycle; không ghi password/token, lọc path/PII nhạy cảm.
 8. **Disaster:** lỗi BIOS/F1 không chữa bằng software. Không tuyên bố tự khởi động sau mất điện cho tới khi sửa/kiểm chứng độc lập.
 

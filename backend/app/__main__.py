@@ -42,6 +42,9 @@ def main() -> None:
     if args.command == "set-password":
         sys.exit(set_password())
 
+    # Uvicorn configures only its own loggers; this shows app.* lines (desktop viewers...).
+    level = getattr(logging, settings.log_level.upper(), logging.INFO)
+    logging.basicConfig(level=level, format="%(levelname)s:     %(name)s: %(message)s")
     if not is_loopback(settings.host):
         log.warning(
             "HOST=%s is not loopback; remote access should go through Tailscale Serve.",

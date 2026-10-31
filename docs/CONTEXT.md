@@ -73,6 +73,7 @@ Owner muốn tận dụng laptop Linux cũ làm server tại nhà 24/7 và tự 
 - `D-23` **Chốt O-02:** đăng nhập bằng **mật khẩu riêng của app**, một owner, không username. Chỉ lưu hash `scrypt` (stdlib) trong `backend/.env` (`OWNER_PASSWORD_HASH`), đặt bằng `scripts\set-password.ps1`. Session = cookie ký HMAC (HttpOnly, SameSite=Strict, Secure khi production), nhớ **1 năm** mỗi thiết bị *(D-25, trước là 30 ngày)*, sống qua restart; đổi mật khẩu ⇒ mọi session hết hiệu lực. Chống CSRF bằng SameSite=Strict + kiểm tra `Origin` + bắt buộc JSON cho mọi request ghi. Sai 5 lần ⇒ khóa đăng nhập 60 s. Chưa đặt mật khẩu ⇒ không ai đăng nhập được (không có cờ bypass; ngoại lệ duy nhất là D-25). Danh tính Tailscale có thể thêm **sau M6** như lớp tiện lợi, không thay mật khẩu.
 - `D-24` Owner **đổi được tên thiết bị** trên UI (thao tác ghi đầu tiên, cần đăng nhập + CSRF). Lưu ở `STATE_DIR/device.json`; ưu tiên **tên đặt trên UI > `DEVICE_LABEL` > hostname**; có "về mặc định". 1–40 ký tự, không ký tự điều khiển. M7 dùng cùng cơ chế cho điện thoại/tablet.
 - `D-25` *(2026-10-31, owner: "máy này chỉ tôi dùng")* **Dev trên ASUS không cần đăng nhập**: khi `MACHINE_ROLE=dev` **và** backend bind loopback, request gửi tới tên loopback (`127.0.0.1`/`localhost`) không cần session; Host khác (chống DNS rebinding), `production` hoặc bind ra ngoài ⇒ vẫn bắt đăng nhập. Request ghi vẫn kiểm tra Origin + JSON. Không phải cờ cấu hình: tự suy từ role + bind. Mật khẩu chỉ cần đặt khi lên Dell (M6). Session nhớ **1 năm** mỗi thiết bị.
+- `D-26` *(M3)* **Không websockify.** Xvnc trên Dell chỉ nghe **Unix socket** (`-rfbunixpath`, mode 0600, `-rfbport -1`): không có cổng TCP VNC nào. Backend tự làm cầu nối WebSocket ↔ VNC ở `/api/desktop/ws`, kiểm session + `Origin` trước khi accept (dùng chung `denial()` với guard HTTP). Xác thực nằm ở một chỗ (backend). Staging từ ASUS: SSH `-L 127.0.0.1:5901:<socket>` + `DESKTOP_VNC=tcp:127.0.0.1:5901`. Desktop chạy theo yêu cầu (ADR-008), không bật lúc boot.
 
 ## 4. Đề xuất kỹ thuật đang ở mức DRAFT
 
@@ -93,7 +94,7 @@ Các đề xuất này có thể sửa trước M1 nếu owner có lý do; AI kh
 | O-01 | Các thư mục Dell được Files quản lý? | Trước M4 |
 | O-02 | ~~Auth owner: local login hay verified identity qua Tailscale?~~ **Đã chốt: mật khẩu riêng của app** (D-23) | — |
 | O-03 | Allowlist của services được phép restart? | Trước M5 |
-| O-04 | Muốn share desktop vật lý hay XFCE session ảo? Đề xuất phiên ảo | Trước nghiệm thu M3 |
+| O-04 | Muốn share desktop vật lý hay XFCE session ảo? **Mặc định phiên ảo** (M3 làm theo hướng này), owner vẫn đổi được trước khi duyệt M3 | Trước nghiệm thu M3 |
 | O-05 | Cần gửi file giữa **các client** trực tiếp hay chỉ browser↔server? V1 browser↔server | Trước M4 |
 | O-06 | Có muốn theo dõi nhiều host trong dashboard v1 không? Mặc định 1 host Dell | Trước M7 |
 | O-07 | Đã biết model 2 máy (§2). Chỉ còn thiếu phiên bản Android/One UI của Tab S10 Lite (Cài đặt → Thông tin máy tính bảng → Thông tin phần mềm) | Trước M7D-0 |
@@ -147,4 +148,4 @@ Next recommended step:
 - M0 đã duyệt 2026-10-31; các điểm mở O-01..O-06 chốt tại milestone tương ứng (safe default trong SPEC).
 - M1 bootstrap giao cho **một** agent, chưa triển khai Dell.
 - Khi M1 pass mới giao M2, sau đó tiến hành tích hợp GUI thật với Dell ở M3.
-- M1, M2, M2.5 đã duyệt 2026-10-31. Kế tiếp **M3** (Remote Desktop, cần Dell).
+- M1, M2, M2.5 đã duyệt 2026-10-31. **M3 phần A** (API desktop, cầu nối WebSocket, trang Remote Desktop) xong trên ASUS; kế tiếp **M3 phần B** trên Dell (owner có mặt).

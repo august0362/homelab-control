@@ -50,6 +50,9 @@ class Settings:
     log_level: str
     owner_password_hash: str | None = None  # scrypt hash (D-23); unset = no login
     allowed_origins: tuple[str, ...] = ()  # extra write origins, e.g. Tailscale Serve
+    desktop_vnc: str | None = None  # "unix:/path.sock" or "tcp:127.0.0.1:5901" (D-26)
+    desktop_unit: str | None = None  # systemd --user unit for start/stop
+    desktop_label: str | None = None  # whose screen it is; default = device label
 
 
 def load_settings() -> Settings:
@@ -69,6 +72,9 @@ def load_settings() -> Settings:
             for o in _env("ALLOWED_ORIGINS").split(",")
             if o.strip()
         ),
+        desktop_vnc=_env("DESKTOP_VNC") or None,
+        desktop_unit=_env("DESKTOP_UNIT") or None,
+        desktop_label=_env("DESKTOP_LABEL") or None,
     )
 
 
