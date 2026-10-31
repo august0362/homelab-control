@@ -211,6 +211,9 @@ Bổ sung (owner yêu cầu, 2026-10-31):
          Evidence: start.bat -> tunnel 5901 tự mở; Start trên web -> desktop Dell running; trước khi cài rule,
          Light sleep -> 403 power_not_permitted và không tắt gì (system đi trước); logic rule thử bằng node trên Dell:
          docker stop YES, ssh stop NO, reboot YES, power-off NO, user khác NO.
+         Sau khi owner chạy power-setup.sh (CanReboot = yes), bấm trên web: Light sleep -> 14 tác vụ dừng,
+         RAM Dell 944 -> 506 MiB; Wake up -> 14 tác vụ chạy lại (1007 MiB); Clean up -> 14 dừng (517 MiB);
+         ssh, tailscaled, NetworkManager luôn active. Restart chưa bấm thử (owner xác nhận reboot không dính F1).
 Next: owner duyệt M3, rồi M4
 ```
 

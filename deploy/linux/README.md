@@ -94,8 +94,8 @@ sudo rm /etc/polkit-1/rules.d/50-homelab-control.rules   # undo
 User services (the desktop, audio) need no rule. The list of optional tasks lives in
 `backend/app/services/power.py`; a test keeps it identical to the rule file.
 
-Restart risk: a normal reboot keeps power on, so the BIOS F1 prompt (seen after power loss)
-should not appear, but this is not verified yet. Restart only when you could reach the Dell.
+Restart and the BIOS F1 prompt: the owner confirmed a normal restart does not stop at F1; that
+prompt only appears after a power loss (weak CMOS battery). The desktop stays off after a restart.
 
 ### Notes for M6
 

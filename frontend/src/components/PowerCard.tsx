@@ -22,7 +22,7 @@ const CONFIRM: Record<Exclude<Action, "wake">, { ask: string; yes: string }> = {
     yes: "Yes, clean up",
   },
   reboot: {
-    ask: "Restart the server? The web loses it for about a minute. If it stops at a BIOS F1 screen, someone must press F1 on it.",
+    ask: "Restart the server? The web loses it for about a minute while it boots; the remote desktop stays off afterwards.",
     yes: "Yes, restart",
   },
 };
@@ -75,7 +75,7 @@ export function PowerCard() {
         {data?.message && <p className="muted">{data.message}</p>}
         {data?.reachable && (
           <p className="muted">
-            {taskSummary(data)}
+            {power.loading ? "Refreshing…" : taskSummary(data)}
             {data.sleeping_since && ` · light sleep since ${formatDateTime(data.sleeping_since)}`}
           </p>
         )}
