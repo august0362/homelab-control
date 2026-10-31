@@ -336,3 +336,10 @@ def test_close_viewers_signals_every_bridge(cfg):
         desktop.close_viewers()
         assert first.is_set() and second.is_set()
     assert desktop.viewers == 0
+
+
+def test_open_viewer_counts_as_running_without_probing(cfg, closed_port):
+    desktop = Desktop(replace(cfg, desktop_vnc=f"tcp:127.0.0.1:{closed_port}"))
+    assert desktop.status()[0] == "stopped"
+    with desktop.viewer():
+        assert desktop.status()[0] == "running"  # the bridge is the proof; no probe

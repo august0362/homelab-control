@@ -11,7 +11,7 @@
 | **M1** | P0 | Khởi tạo repo + frontend/backend chạy trên ASUS | M0 | **Duyệt 2026-10-31** |
 | **M2** | P0 | Dashboard metrics thật + realtime + trạng thái offline | M1 | **Duyệt 2026-10-31** |
 | **M2.5** | P0 | Đăng nhập mật khẩu owner (D-23), bảo vệ `/api` trừ `/health`, CSRF/Origin, đổi tên thiết bị (D-24) | M1 | **Duyệt 2026-10-31** |
-| **M3** | P0 | Remote Desktop GUI Dell tích hợp trong web | M1, M2, M2.5 | Phần A xong, chờ phần B (Dell) |
+| **M3** | P0 | Remote Desktop GUI Dell tích hợp trong web | M1, M2, M2.5 | Xong A + B, chờ duyệt |
 | **M4** | P1 | File Manager giới hạn quyền + upload/download | M1, M2.5 | Chưa |
 | **M5** | P1 | System Services, logs, thao tác allowlist | M1, M2.5 | Chưa |
 | **M6** | P0 | Production release trên Dell, Tailscale Serve, recovery/rollback | M2–M5 theo phạm vi release | Chưa |
@@ -165,8 +165,9 @@ Next: M3
 **Tiến độ**
 ```text
 Milestone: M3
-Status: Phần A DONE trên ASUS (chưa nghiệm thu); phần B (Dell) chưa làm, cần owner có mặt
-Commit: "M3a: desktop API, authenticated VNC bridge, Remote Desktop page", branch navi (chưa push)
+Status: Phần A + B DONE, chờ owner duyệt (O-04 = phiên ảo)
+Commit: 9ff6f4c "M3a: desktop API, authenticated VNC bridge, Remote Desktop page"
+        + "M3b: Dell virtual desktop setup, staging verified", branch navi (chưa push)
 Changes: backend/app/services/desktop.py (DESKTOP_VNC unix:/tcp loopback, probe banner RFB, systemctl --user argv cố định,
          đếm/đóng viewer), api/desktop.py (status/start/stop + WS /api/desktop/ws, anyio task group, khung tối đa 1 MiB),
          api/guard.py (denial() dùng chung HTTP + WebSocket), services/device.py (capability desktop thật),
@@ -174,7 +175,7 @@ Changes: backend/app/services/desktop.py (DESKTOP_VNC unix:/tcp loopback, probe 
          frontend: @novnc/novnc 1.7.0 (tải lười, chunk riêng), hooks/useVnc.ts, components/VncToolbar.tsx
          (Ctrl+Alt+Del, Esc, Tab, Keyboard cho mobile, Fullscreen), pages/RemoteDesktop.tsx, lib/desktop.ts,
          types/novnc.d.ts, vite.config.ts (proxy ws: true, vẫn changeOrigin:false)
-Tests: scripts\test.ps1 -> ruff OK, pytest 97 passed, vitest 20 passed, tsc + vite build OK
+Tests: scripts\test.ps1 -> ruff OK, pytest 97 passed (A) -> 98 (B), vitest 20 passed, tsc + vite build OK
 Evidence: ASUS mặc định -> trang Remote Desktop "Not configured" + hướng dẫn README; capability desktop not_configured;
           Dashboard/metrics vẫn Live như M2; 360px không tràn ngang.
           PROTOCOL TEST (server RFB giả lập trong scratchpad, KHÔNG phải desktop, không commit): status running;
@@ -184,7 +185,23 @@ Evidence: ASUS mặc định -> trang Remote Desktop "Not configured" + hướng
 Risks: Session chỉ kiểm lúc mở WebSocket. Unix socket chưa chạy thật (ASUS là Windows) -> kiểm ở phần B/M6.
        Hành vi WebSocket qua Tailscale Serve chưa kiểm (M6). Backend M6 phải chạy cùng user với Xvnc để mở socket.
        Bàn phím mobile chỉ best effort (gõ chữ, Backspace, Enter). Probe banner mỗi 3 s khi mở trang -> Xvnc ghi log kết nối.
-Next: M3 phần B (Dell: deploy/linux/desktop-setup.sh, unit hlc-desktop, staging qua SSH tunnel, đo RAM/CPU, rescue)
+Part B:  deploy/linux/desktop-setup.sh (owner chạy, sudo do owner gõ: chỉ cài tigervnc-standalone-server,
+         tigervnc-common, xfce4 + 2 gói phụ, ~3.4 MB; bật linger), hlc-desktop-session.sh (Xvnc :1 -rfbunixpath
+         0600 -rfbport -1 -nolisten tcp -SecurityTypes None -UseBlacklist=0, rồi startxfce4), hlc-desktop.service
+         (user unit, không [Install] -> "static", không bật lúc boot), deploy/linux/README.md (dùng, rescue, gỡ, ghi chú M6);
+         backend: bỏ probe khi đang có viewer; frontend: Pop out (cửa sổ riêng #/desktop-window, nút Return to page)
+Evidence B: Dell (Mint 22.3 XFCE, đã có sẵn XFCE): unit active, socket srw------- của user, cổng TCP không đổi
+          (22, 53, 631, 2 cổng Tailscale), không cổng VNC/X; ASUS -> SSH -L 127.0.0.1:5901:<socket> -> trang hiện desktop
+          XFCE thật "Dell"; Ctrl+Alt+T gõ từ web mở Terminal TRONG desktop, `hostname` gõ từ web ra đúng tên Dell (AT-05);
+          chuột, cuộn, Fullscreen chạy; 360px không tràn. Cắt tunnel -> "Stopped" (thông báo: desktop dừng hoặc tunnel đứt),
+          metrics vẫn 200; tunnel lại -> "Disconnected" -> Reconnect -> Running. Stop desktop -> RAM 928 -> 569 MiB,
+          0 tiến trình sót, ssh + tailscaled active, metrics 200 (AT-06). Pop out -> cửa sổ "Desktop: Dell" chỉ màn hình,
+          Return to page -> cửa sổ đóng, khung kết nối lại; luôn 1 viewer.
+          RAM: tắt ~560 MiB; bật ~890-950 MiB; đang xem ~940 MiB; CPU ~99 % idle, Xvnc ~1-2 %.
+Bug tìm thấy và sửa: TigerVNC blacklist chặn viewer sau 5 probe (mọi client socket chung địa chỉ) -> -UseBlacklist=0.
+Risks B: Lần đầu XFCE hiện Welcome + hộp thoại colord đòi mật khẩu (bấm Cancel). Không unit thì không phân biệt được
+          "desktop dừng" với "tunnel đứt". Start/Stop từ web chỉ có ở M6 (backend chạy trên Dell, DESKTOP_UNIT).
+Next: owner duyệt M3, rồi M4
 ```
 
 ## M4 — File Manager

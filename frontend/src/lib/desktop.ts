@@ -35,3 +35,7 @@ export function keysymFor(ch: string): number | null {
   if (cp === undefined || cp < 0x20 || (cp >= 0x7f && cp < 0xa0)) return null;
   return cp < 0x100 ? cp : 0x01000000 + cp;
 }
+
+/** The detached desktop window (hash route outside the app shell) and its "back to the page" message. */
+export const POPOUT_PATH = "/desktop-window";
+export const RETURN_MESSAGE = "hlc-desktop:return";

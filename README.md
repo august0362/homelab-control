@@ -2,7 +2,7 @@
 
 Private web app to monitor and control a Dell Linux Mint server from an ASUS laptop, phones and tablets over Tailscale. Development runs on the ASUS (Windows); deployment to the Dell comes in M6.
 
-**Status:** M1 (project bootstrap) approved; M2 (real metrics, realtime charts, offline/stale) approved; M2.5 (owner login + device rename) approved; M3 (Remote Desktop) part A done on the ASUS, part B (Dell setup) next. Milestones and decisions are in [docs/](docs/); start with [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
+**Status:** M1 (project bootstrap) approved; M2 (real metrics, realtime charts, offline/stale) approved; M2.5 (owner login + device rename) approved; M3 (Remote Desktop) done (part A on the ASUS, part B verified on the real Dell), waiting for owner approval. Milestones and decisions are in [docs/](docs/); start with [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
 
 ## Structure
 
@@ -86,7 +86,7 @@ Everything under `/api` except `/api/health` and `/api/auth/*` needs the session
 
 ## Remote desktop (staging)
 
-The desktop is a separate XFCE session on the Dell (TigerVNC Xvnc, 1280x720, started on demand). Xvnc listens **only on a Unix socket** (`/run/user/<uid>/hlc-vnc.sock`, mode 0600): there is no VNC TCP port and no websockify. The backend bridges the browser's WebSocket to that socket after checking the session and `Origin` (D-26). Dell setup lives in `deploy/linux/` (M3 part B).
+The desktop is a separate XFCE session on the Dell (TigerVNC Xvnc, 1280x720, started on demand). Xvnc listens **only on a Unix socket** (`/run/user/<uid>/hlc-vnc.sock`, mode 0600): there is no VNC TCP port and no websockify. The backend bridges the browser's WebSocket to that socket after checking the session and `Origin` (D-26). Dell setup, rescue and undo: [deploy/linux/README.md](deploy/linux/README.md).
 
 Before the full deploy (M6), the ASUS can show the Dell's desktop:
 
@@ -95,7 +95,7 @@ Before the full deploy (M6), the ASUS can show the Dell's desktop:
 3. ASUS `backend/.env`: `DESKTOP_VNC=tcp:127.0.0.1:5901`, `DESKTOP_LABEL=Dell`, `DESKTOP_UNIT` empty; restart the backend, open Remote Desktop, press Connect.
 4. When done: `systemctl --user stop hlc-desktop` on the Dell, close the tunnel.
 
-While the tunnel is open, any program on the ASUS can reach the Dell's desktop through 127.0.0.1:5901 (accepted: only the owner uses the ASUS, D-25). Phones: the toolbar has Ctrl+Alt+Del, Esc, Tab and a Keyboard button that opens the on-screen keyboard (best effort; typed text and Backspace/Enter are sent, other special keys are not).
+While the tunnel is open, any program on the ASUS can reach the Dell's desktop through 127.0.0.1:5901 (accepted: only the owner uses the ASUS, D-25). **Pop out** opens the desktop in a window of its own (only the screen and its keys; move it to another monitor); its **Return to page** button closes it and shows the desktop in the page again. Phones: the toolbar has Ctrl+Alt+Del, Esc, Tab and a Keyboard button that opens the on-screen keyboard (best effort; typed text and Backspace/Enter are sent, other special keys are not).
 ## Security rules
 
 Owner login on every API call except health, CSRF checks on writes, the only write routes are login/logout, rename and desktop start/stop, no shell execution from web input, bound to 127.0.0.1, no public ports, no secrets in git. Details: [docs/CONTEXT.md](docs/CONTEXT.md).

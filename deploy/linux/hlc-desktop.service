@@ -1,0 +1,12 @@
+# HomeLab Control virtual desktop (M3, D-26): systemd --user unit, on demand only.
+# Installed by desktop-setup.sh to ~/.config/systemd/user/. There is deliberately no
+# [Install] section: it cannot be enabled at boot (ADR-008), only started from the
+# web UI (DESKTOP_UNIT) or over SSH: systemctl --user start|stop hlc-desktop
+[Unit]
+Description=HomeLab Control virtual desktop (Xvnc :1 on a Unix socket + XFCE)
+
+[Service]
+Type=simple
+ExecStart=%h/.local/libexec/hlc-desktop-session
+Restart=no
+TimeoutStopSec=15

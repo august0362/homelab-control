@@ -138,6 +138,11 @@ class Desktop:
             check=False,
         )
 
+    def _answering(self) -> bool:
+        """An open viewer already proves the server is up: skip the probe (fewer
+        half-open connections in the VNC log)."""
+        return self.viewers > 0 or self._probe()
+
     def status(self) -> tuple[str, str]:
         """(state, message): not_configured | stopped | starting | running | error."""
         if not self.target:
@@ -158,12 +163,14 @@ class Desktop:
                 return "stopped", "Desktop is stopping…"
             if state != "active":
                 return "stopped", "Desktop is stopped."
-            if not self._probe():
+            if not self._answering():
                 return "starting", "Service is up, waiting for the VNC server…"
             return "running", "Desktop is running."
-        if self._probe():
+        if self._answering():
             return "running", "VNC server is answering."
-        return "stopped", "No VNC server answers. Start the desktop on the server."
+        return "stopped", (
+            "No VNC server answers: the desktop is stopped or the tunnel is down."
+        )
 
     # --- start / stop ---------------------------------------------------------
 

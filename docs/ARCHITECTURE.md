@@ -87,7 +87,7 @@ Tailscale tailnet
 - Backend chạy `127.0.0.1`, dưới user hạn chế, do systemd giám sát.
 - Xvnc không tự bật toàn thời gian nếu không cần; XFCE được khởi chạy trong session ảo và không yêu cầu monitor vật lý.
 - VNC không mở cổng TCP nào; kiểm tra lại bằng `ss -lntp` sau setup.
-- **Giải pháp WebSocket (D-26, M3):** không websockify. Backend tự làm cầu nối byte WebSocket ↔ VNC (`asyncio` + task group của anyio có sẵn trong Starlette), kiểm session + `Origin` trước khi accept (HTTP middleware không chạy cho WebSocket nên endpoint gọi chung hàm `denial()` của guard). Xvnc chỉ nghe Unix socket 0600 của user, nên `SecurityTypes None` chấp nhận được: chỉ user đó (và backend chạy cùng user, M6) mở được socket. Session chỉ kiểm lúc mở WebSocket; viewer đang mở chạy tới khi ngắt hoặc desktop bị Stop.
+- **Giải pháp WebSocket (D-26, M3):** không websockify. Backend tự làm cầu nối byte WebSocket ↔ VNC (`asyncio` + task group của anyio có sẵn trong Starlette), kiểm session + `Origin` trước khi accept (HTTP middleware không chạy cho WebSocket nên endpoint gọi chung hàm `denial()` của guard). Xvnc chỉ nghe Unix socket 0600 của user, nên `SecurityTypes None` chấp nhận được: chỉ user đó (và backend chạy cùng user, M6) mở được socket. Xvnc chạy với `-UseBlacklist=0`: mọi client socket chung một "địa chỉ", probe trạng thái (kết nối, đọc banner, đóng) sẽ làm TigerVNC chặn luôn viewer thật; backend cũng bỏ probe khi đang có viewer. Session chỉ kiểm lúc mở WebSocket; viewer đang mở chạy tới khi ngắt hoặc desktop bị Stop.
 
 ## 4. Components
 

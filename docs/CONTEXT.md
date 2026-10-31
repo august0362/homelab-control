@@ -148,4 +148,4 @@ Next recommended step:
 - M0 đã duyệt 2026-10-31; các điểm mở O-01..O-06 chốt tại milestone tương ứng (safe default trong SPEC).
 - M1 bootstrap giao cho **một** agent, chưa triển khai Dell.
 - Khi M1 pass mới giao M2, sau đó tiến hành tích hợp GUI thật với Dell ở M3.
-- M1, M2, M2.5 đã duyệt 2026-10-31. **M3 phần A** (API desktop, cầu nối WebSocket, trang Remote Desktop) xong trên ASUS; kế tiếp **M3 phần B** trên Dell (owner có mặt).
+- M1, M2, M2.5 đã duyệt 2026-10-31. **M3** xong cả hai phần (phần B kiểm trên Dell thật 2026-10-31: XFCE ảo, `hostname` trong Terminal = Dell, không cổng VNC), chờ owner duyệt; O-04 = phiên ảo. Kế tiếp **M4** (Files, cần chốt O-01/O-05).

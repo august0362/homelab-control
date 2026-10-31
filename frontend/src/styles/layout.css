@@ -890,3 +890,31 @@ code {
   aspect-ratio: auto;
   max-height: none;
 }
+
+/* Detached desktop window: only the screen and its keys */
+.popout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100vh;
+  padding: 8px;
+  background: var(--bg);
+}
+
+.popout-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.popout-return {
+  margin-left: auto;
+}
+
+.popout-screen {
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: auto;
+  max-height: none;
+}
