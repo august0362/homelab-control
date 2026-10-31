@@ -2,7 +2,7 @@
 
 Private web app to monitor and control a Dell Linux Mint server from an ASUS laptop, phones and tablets over Tailscale. Development runs on the ASUS (Windows); deployment to the Dell comes in M6.
 
-**Status:** M1 (project bootstrap) approved; M2 (real metrics, realtime charts, offline/stale) approved; M2.5 (owner login + device rename) awaiting approval; M3 next. Milestones and decisions are in [docs/](docs/); start with [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
+**Status:** M1 (project bootstrap) approved; M2 (real metrics, realtime charts, offline/stale) approved; M2.5 (owner login + device rename) approved; M3 (Remote Desktop) next. Milestones and decisions are in [docs/](docs/); start with [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
 
 ## Structure
 

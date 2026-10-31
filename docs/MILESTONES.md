@@ -10,7 +10,7 @@
 | **M0** | P0 | Chốt tài liệu đặc tả, kiến trúc, context, phạm vi | — | **Duyệt 2026-10-31** |
 | **M1** | P0 | Khởi tạo repo + frontend/backend chạy trên ASUS | M0 | **Duyệt 2026-10-31** |
 | **M2** | P0 | Dashboard metrics thật + realtime + trạng thái offline | M1 | **Duyệt 2026-10-31** |
-| **M2.5** | P0 | Đăng nhập mật khẩu owner (D-23), bảo vệ `/api` trừ `/health`, CSRF/Origin, đổi tên thiết bị (D-24) | M1 | **Chờ duyệt** |
+| **M2.5** | P0 | Đăng nhập mật khẩu owner (D-23), bảo vệ `/api` trừ `/health`, CSRF/Origin, đổi tên thiết bị (D-24) | M1 | **Duyệt 2026-10-31** |
 | **M3** | P0 | Remote Desktop GUI Dell tích hợp trong web | M1, M2, M2.5 | Chưa |
 | **M4** | P1 | File Manager giới hạn quyền + upload/download | M1, M2.5 | Chưa |
 | **M5** | P1 | System Services, logs, thao tác allowlist | M1, M2.5 | Chưa |
@@ -116,7 +116,7 @@ Next: M2.5
 **Tiến độ**
 ```text
 Milestone: M2.5
-Status: Chờ owner duyệt (code + test xong 2026-10-31)
+Status: DONE (owner duyệt 2026-10-31)
 Commit: ac33e7b "M2.5: owner login, CSRF/Origin, device rename" + "M2.5: no login in dev on loopback (D-25), 1-year session", branch navi (chưa push)
 Changes: backend/app/services/auth.py (scrypt, cookie "<expires>.<hmac>", key = STATE_DIR/session_secret + hash, khóa 5 lần/60 s),
          api/guard.py (middleware duy nhất: Origin + JSON cho request ghi, rồi session; chỉ /api/health, /api/auth/* public),
