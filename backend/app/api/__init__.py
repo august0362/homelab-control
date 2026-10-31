@@ -2,8 +2,9 @@
 
 from fastapi import APIRouter
 
-from app.api import health, system
+from app.api import health, metrics, system
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(health.router)
 api_router.include_router(system.router)
+api_router.include_router(metrics.router)

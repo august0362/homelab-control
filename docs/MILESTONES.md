@@ -9,7 +9,7 @@
 |---|---|---|---|---|
 | **M0** | P0 | Chốt tài liệu đặc tả, kiến trúc, context, phạm vi | — | **Duyệt 2026-10-31** |
 | **M1** | P0 | Khởi tạo repo + frontend/backend chạy trên ASUS | M0 | **Duyệt 2026-10-31** |
-| **M2** | P0 | Dashboard metrics thật + realtime + trạng thái offline | M1 | Chưa |
+| **M2** | P0 | Dashboard metrics thật + realtime + trạng thái offline | M1 | Xong, chờ owner duyệt |
 | **M2.5** | P0 | Auth owner (chốt O-02), bảo vệ `/api` trừ `/health`, CSRF/Origin | M1 | Chưa |
 | **M3** | P0 | Remote Desktop GUI Dell tích hợp trong web | M1, M2, M2.5 | Chưa |
 | **M4** | P1 | File Manager giới hạn quyền + upload/download | M1, M2.5 | Chưa |
@@ -72,6 +72,26 @@ Next: M2
 - Dashboard số liệu thay đổi khi tạo tải thử; % trong ngưỡng hợp lý.
 - Tắt backend rồi bật lại: UI offline, sau đó tự khôi phục.
 - Không có dữ liệu giả xuất hiện như sensor thật; có tests field missing/counter reset.
+
+**Tiến độ**
+```text
+Milestone: M2
+Status: DONE (chờ owner duyệt)
+Commit: "M2: real metrics, realtime charts, offline/stale", branch navi
+Changes: backend/app/services/metrics.py (MetricsCollector), api/metrics.py (GET /api/metrics),
+         platform_adapter.py (battery/ac_power; Linux đọc /sys/class/power_supply, pin hỏng -> status=error),
+         device.py (metrics = supported, battery theo adapter), tests/test_metrics.py;
+         frontend: lib/history.ts (300 mẫu = 10 phút), hooks/useMetrics.ts, components/LineChart.tsx (SVG tự viết),
+         Dashboard (4 KPI, chart CPU/RAM + network, Sensors, Live/Stale/Offline), lib/status.ts (freshness)
+Tests: scripts	est.ps1 -> ruff OK, pytest 23 passed, vitest 13 passed, tsc + vite build OK
+Evidence: ASUS (label "this ASUS"): tải 8 tiến trình -> CPU 24% -> 52-65% trên chart; 3 viewer gọi đồng thời nhận cùng giá trị;
+          kill backend -> "Offline · last updated hh:mm:ss", giữ chart cũ; bật lại -> Live không reload, chart có khoảng trống;
+          360px không tràn ngang (scrollWidth 360). Temperature/fans Windows = N/A + lý do; pin 80%, AC plugged in.
+Risks: Linux battery/sysfs/AC và nhiệt độ chỉ test bằng mock, chưa chạy trên Dell; quy tắc nhận diện pin hỏng
+       (capacity đọc lỗi, hoặc 0% mà không Discharging, hoặc psutil không thấy pin mà sysfs có) cần xác nhận trên Dell.
+       CPU % tự tính từ delta cpu_times() (psutil.cpu_percent giữ mẫu theo từng thread -> trả 0.0 trên threadpool).
+Next: M2.5
+```
 
 ## M3 — Remote Desktop tích hợp GUI
 

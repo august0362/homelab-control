@@ -49,7 +49,8 @@ def test_system_shape(client):
         "services",
     }
     assert all(c["status"] in CAPABILITY_STATUSES for c in caps.values())
-    assert caps["metrics"]["status"] == "not_configured"
+    assert caps["metrics"]["status"] == "supported"
+    assert caps["desktop"]["status"] == "not_configured"
 
 
 def test_unknown_route_is_json_404(client):

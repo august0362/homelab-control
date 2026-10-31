@@ -2,7 +2,7 @@
 
 Private web app to monitor and control a Dell Linux Mint server from an ASUS laptop, phones and tablets over Tailscale. Development runs on the ASUS (Windows); deployment to the Dell comes in M6.
 
-**Status:** M1 (project bootstrap) approved; M2 (real metrics) next. Milestones and decisions are in [docs/](docs/); start with [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
+**Status:** M1 (project bootstrap) approved; M2 (real metrics, realtime charts, offline/stale) implemented, awaiting approval; M2.5 (auth) next. Milestones and decisions are in [docs/](docs/); start with [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
 
 ## Structure
 
@@ -41,6 +41,7 @@ cd frontend; npm run dev                               # UI on 127.0.0.1:5173, p
 - UI (dev): http://localhost:5173
 - API health: http://127.0.0.1:8000/api/health
 - System info: http://127.0.0.1:8000/api/system
+- Live metrics: http://127.0.0.1:8000/api/metrics
 - API docs (role `dev` only): http://127.0.0.1:8000/api/docs
 - After `build.ps1`, the backend also serves the UI at http://127.0.0.1:8000
 
@@ -60,10 +61,11 @@ Copy `backend/.env.example` to `backend/.env` (setup does this). Never commit `.
 
 Frontend: `frontend/.env` may set `VITE_API_PROXY_TARGET` (dev proxy target, default `http://127.0.0.1:8000`).
 
-## API (M1, read-only)
+## API (M1–M2, read-only)
 
 - `GET /api/health` → `{status, timestamp, version}`
 - `GET /api/system` → `{timestamp, device, os, hardware, app, capabilities}`
+- `GET /api/metrics` → `{timestamp, device, cpu, memory, swap, disk, network, uptime_seconds, sensors{temperature, fans, battery, ac}}`. Each group is `{status, data, message}` with `status` = `ok | unsupported | unavailable | error`; `data` is `null` unless `ok` (no fake zeros). Network is bytes/s from counter deltas. The UI polls every 2 s and keeps 10 min in browser memory.
 - Errors are always `{code, message}`.
 
 ## Security rules

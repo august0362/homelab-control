@@ -126,7 +126,7 @@ Owner dùng Server Control trên ASUS để quản lý điện thoại/tablet **
 ```text
 GET  /api/health           -> {status, timestamp, version}
 GET  /api/system           -> {timestamp, device, os, hardware, capabilities}
-GET  /api/metrics          -> {timestamp, device, cpu, memory, disks, network, uptime, sensors}
+GET  /api/metrics          -> {timestamp, device, cpu, memory, swap, disk, network, uptime_seconds, sensors{temperature, fans, battery, ac}}
 GET  /api/desktop/status   -> {status, session, connection_url?}
 POST /api/desktop/start    -> auth + authorization required (M3)
 POST /api/desktop/stop     -> auth + authorization required (M3)
@@ -141,7 +141,7 @@ POST /api/services/{id}/restart -> disabled until M5 authorization verified
 - `device_type` v1 = `computer`; M7 thêm `phone`, `tablet`.
 - v1 giữ endpoint phẳng cho thiết bị local; M7 thêm `/api/devices/{id}/...`, endpoint phẳng thành alias của thiết bị local.
 - M7D (dự kiến, chốt khi làm): `GET /api/devices`, `POST /api/devices/{id}/commands` → `202 {command_id, status: "requested"}`, `GET /api/devices/{id}/commands/{command_id}`; nhóm `/api/agent/*` (enroll, heartbeat/state, lấy lệnh, ack, result) chỉ nhận token thiết bị. Xem `ARCHITECTURE.md` §4A.3.
-- `/api/metrics` không truyền password/token; field invalid/unsupported phải có trạng thái dễ nhận biết.
+- `/api/metrics` không truyền password/token; field invalid/unsupported phải có trạng thái dễ nhận biết: mỗi nhóm là `{status, data, message}`, `status ∈ ok | unsupported | unavailable | error`, `data = null` khi không phải `ok`.
 - Error format ổn định (`code`, `message`, `request_id?`) để frontend xử lý.
 - `GET /api/desktop/status` có thể không có connection URL khi ngừng chạy; **không trả token xác thực VNC trong dữ liệu công khai**.
 

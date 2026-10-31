@@ -15,7 +15,7 @@ from app.services.platform_adapter import PlatformAdapter
 CAPABILITY_STATUSES = {"supported", "unsupported", "not_configured", "requires_consent"}
 
 # Features whose backend lands in a later milestone.
-_PLANNED = {"metrics": "M2", "desktop": "M3", "files": "M4", "services": "M5"}
+_PLANNED = {"desktop": "M3", "files": "M4", "services": "M5"}
 _CAPABILITY_ORDER = (
     "metrics",
     "temperature",
@@ -53,7 +53,7 @@ def device_info(cfg: Settings, adapter: PlatformAdapter) -> dict[str, Any]:
 
 
 def capabilities(adapter: PlatformAdapter) -> dict[str, dict[str, str | None]]:
-    sensors = adapter.sensor_support()
+    sensors = {"metrics": True, **adapter.sensor_support()}
     caps: dict[str, dict[str, str | None]] = {}
     for name in _CAPABILITY_ORDER:
         if name in _PLANNED:

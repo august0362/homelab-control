@@ -5,6 +5,7 @@ import { Sidebar } from "./components/Sidebar";
 import { StatusBadge } from "./components/StatusBadge";
 import { Topbar } from "./components/Topbar";
 import { useHashPath } from "./hooks/useHashPath";
+import { useMetrics } from "./hooks/useMetrics";
 import { usePolling } from "./hooks/usePolling";
 import { connectionStatus } from "./lib/status";
 import { findRoute } from "./routes";
@@ -17,6 +18,7 @@ export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const health = usePolling<Health>("/api/health", HEALTH_MS);
   const system = usePolling<SystemInfo>("/api/system", SYSTEM_MS);
+  const metrics = useMetrics();
 
   // Backend came back: reload device info now instead of waiting for the slow poll.
   const { retry: retrySystem, error: systemError } = system;
@@ -63,7 +65,7 @@ export function App() {
             </button>
           </div>
         </header>
-        <Page system={system} health={health} />
+        <Page system={system} health={health} metrics={metrics} />
       </main>
     </div>
   );

@@ -11,6 +11,15 @@ export function formatBytes(bytes: number | null | undefined): string {
   return `${unit === 0 ? value : value.toFixed(1)} ${UNITS[unit]}`;
 }
 
+export function formatRate(bytesPerSec: number | null | undefined): string {
+  const bytes = formatBytes(bytesPerSec);
+  return bytes === "—" ? bytes : `${bytes}/s`;
+}
+
+export function formatPercent(value: number | null | undefined, digits = 0): string {
+  return value == null || !Number.isFinite(value) ? "—" : `${value.toFixed(digits)}%`;
+}
+
 /** 93784000 ms -> "1d 2h 3m"; under a minute -> "<1m". */
 export function formatDuration(ms: number | null | undefined): string {
   if (ms == null || !Number.isFinite(ms) || ms < 0) return "—";
