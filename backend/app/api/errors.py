@@ -13,7 +13,17 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 log = logging.getLogger(__name__)
 
 
-def _error(
+class ApiError(StarletteHTTPException):
+    """An HTTP error with an explicit code, e.g. 401 invalid_credentials."""
+
+    def __init__(
+        self, status: int, code: str, message: str, headers: dict | None = None
+    ) -> None:
+        super().__init__(status, message, headers)
+        self.code = code
+
+
+def error_response(
     status: int, code: str, message: str, headers: dict | None = None
 ) -> JSONResponse:
     return JSONResponse(
@@ -28,15 +38,19 @@ def register_error_handlers(app: FastAPI) -> None:
             phrase = HTTPStatus(exc.status_code).phrase
         except ValueError:
             phrase = "Error"
-        code = phrase.lower().replace(" ", "_").replace("-", "_")  # 404 -> not_found
+        code = getattr(exc, "code", None) or phrase.lower().replace(" ", "_").replace(
+            "-", "_"
+        )  # 404 -> not_found
         message = exc.detail if isinstance(exc.detail, str) else phrase
-        return _error(exc.status_code, code, message, getattr(exc, "headers", None))
+        return error_response(
+            exc.status_code, code, message, getattr(exc, "headers", None)
+        )
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
-        return _error(422, "validation_error", "Invalid request parameters.")
+        return error_response(422, "validation_error", "Invalid request parameters.")
 
     @app.exception_handler(Exception)
     async def internal_error(request: Request, exc: Exception) -> JSONResponse:
         log.exception("unhandled error on %s %s", request.method, request.url.path)
-        return _error(500, "internal_error", "Internal server error.")
+        return error_response(500, "internal_error", "Internal server error.")

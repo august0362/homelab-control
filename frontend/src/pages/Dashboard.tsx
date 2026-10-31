@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Metric } from "../api/types";
 import { type Accent, Card } from "../components/Card";
+import { DeviceName } from "../components/DeviceName";
 import { LineChart } from "../components/LineChart";
 import { StatusBadge } from "../components/StatusBadge";
 import { METRICS_MS } from "../hooks/useMetrics";
@@ -119,8 +120,16 @@ export function Dashboard({ system, health, metrics }: PageProps) {
       <Card title="Device" accent="s1">
         {info ? (
           <dl className="kv">
-            <dt>Label</dt>
-            <dd>{info.device.label}</dd>
+            <dt>Name</dt>
+            <dd>
+              <DeviceName
+                device={info.device}
+                onSaved={() => {
+                  system.retry();
+                  metrics.retry();
+                }}
+              />
+            </dd>
             <dt>Hostname</dt>
             <dd className="mono">{info.hardware.hostname}</dd>
             <dt>OS</dt>

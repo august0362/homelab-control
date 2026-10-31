@@ -9,7 +9,11 @@ export default defineConfig(({ mode }) => {
       host: "127.0.0.1",
       port: 5173,
       strictPort: true,
-      proxy: { "/api": env.VITE_API_PROXY_TARGET || "http://127.0.0.1:8000" },
+      proxy: {
+        // Keep the browser's Host: the backend's CSRF check compares it with Origin.
+        // (The string shorthand would set changeOrigin: true and rewrite Host.)
+        "/api": { target: env.VITE_API_PROXY_TARGET || "http://127.0.0.1:8000", changeOrigin: false },
+      },
     },
   };
 });

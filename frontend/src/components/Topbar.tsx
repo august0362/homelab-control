@@ -5,9 +5,10 @@ interface TopbarProps {
   system: SystemInfo | null;
   menuOpen: boolean;
   onToggleMenu: () => void;
+  onLogout: () => void;
 }
 
-export function Topbar({ system, menuOpen, onToggleMenu }: TopbarProps) {
+export function Topbar({ system, menuOpen, onToggleMenu, onLogout }: TopbarProps) {
   const device = system?.device;
   return (
     <header className="topbar">
@@ -38,6 +39,10 @@ export function Topbar({ system, menuOpen, onToggleMenu }: TopbarProps) {
         ) : (
           <span className="topbar-label muted">No device info</span>
         )}
+        <button className="btn logout-btn" onClick={onLogout} aria-label="Log out" title="Log out">
+          <Icon name="logout" size={16} />
+          <span className="logout-text">Log out</span>
+        </button>
       </div>
     </header>
   );

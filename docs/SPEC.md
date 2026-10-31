@@ -140,7 +140,7 @@ POST /api/services/{id}/restart -> disabled until M5 authorization verified
 ```
 
 - Mọi payload phải có `timestamp` hoặc `last_updated` để nhận biết dữ liệu cũ.
-- `device` = `{id, label, role, platform, device_type}` (FR-07.2). `id` ổn định, không phụ thuộc IP/hostname: env `DEVICE_ID`, nếu trống thì UUID sinh một lần và lưu ở `backend/.state/device_id` (gitignored). `online_status`/`last_seen` thuộc device registry ở M7.
+- `device` = `{id, label, label_source, role, platform, device_type}` (FR-07.2). `label_source` = `custom` (đặt trên UI, D-24) | `env` (`DEVICE_LABEL`) | `hostname`. `id` ổn định, không phụ thuộc IP/hostname: env `DEVICE_ID`, nếu trống thì UUID sinh một lần và lưu ở `backend/.state/device_id` (gitignored). `online_status`/`last_seen` thuộc device registry ở M7.
 - `capabilities` = map `{tên: {status, message}}`, `status ∈ supported | unsupported | not_configured | requires_consent`. Tên v1: `metrics`, `temperature`, `fans`, `battery`, `desktop`, `files`, `services`. M7 bổ sung `screen_view`, `remote_input`, `file_transfer`, `background_operations`, `keep_screen_awake` (FR-08.9). Capability nói thiết bị **có thể** làm gì; trạng thái bật/tắt hiện tại là **control state** riêng (FR-08.3).
 - `device_type` v1 = `computer`; M7 thêm `phone`, `tablet`.
 - v1 giữ endpoint phẳng cho thiết bị local; M7 thêm `/api/devices/{id}/...`, endpoint phẳng thành alias của thiết bị local.

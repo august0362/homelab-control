@@ -9,9 +9,16 @@ export interface Health {
 export interface Device {
   id: string;
   label: string;
+  label_source: "custom" | "env" | "hostname"; // "custom" = renamed on the UI
   role: "dev" | "production";
   platform: string;
   device_type: string;
+}
+
+export interface Session {
+  authenticated: boolean;
+  configured: boolean; // false = no owner password set yet
+  expires_at: string | null;
 }
 
 export type CapabilityStatus = "supported" | "unsupported" | "not_configured" | "requires_consent";

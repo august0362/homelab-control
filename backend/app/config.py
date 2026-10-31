@@ -38,6 +38,8 @@ class Settings:
     device_label: str | None
     machine_role: str
     log_level: str
+    owner_password_hash: str | None = None  # scrypt hash (D-23); unset = no login
+    allowed_origins: tuple[str, ...] = ()  # extra write origins, e.g. Tailscale Serve
 
 
 def load_settings() -> Settings:
@@ -51,7 +53,28 @@ def load_settings() -> Settings:
         device_label=_env("DEVICE_LABEL") or None,
         machine_role=role if role in {"dev", "production"} else "dev",
         log_level=_env("LOG_LEVEL", "info").lower() or "info",
+        owner_password_hash=_env("OWNER_PASSWORD_HASH") or None,
+        allowed_origins=tuple(
+            o.strip().rstrip("/")
+            for o in _env("ALLOWED_ORIGINS").split(",")
+            if o.strip()
+        ),
     )
+
+
+def set_env_value(path: Path, key: str, value: str) -> None:
+    """Replace `key=...` in a .env file (or append it), keeping every other line."""
+    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    line = f"{key}='{value}'"  # single quotes: python-dotenv expands nothing inside
+    for i, old in enumerate(lines):
+        if old.strip().startswith(f"{key}="):
+            lines[i] = line
+            break
+    else:
+        lines.append(line)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    tmp.replace(path)
 
 
 settings = load_settings()

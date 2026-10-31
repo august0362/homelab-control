@@ -10,7 +10,7 @@ const unavailable = { status: "unavailable", data: null, message: "x" } as const
 function metrics(deviceId: string, cpu: number | null): Metrics {
   return {
     timestamp: "",
-    device: { id: deviceId, label: "", role: "dev", platform: "windows", device_type: "computer" },
+    device: { id: deviceId, label: "", label_source: "hostname", role: "dev", platform: "windows", device_type: "computer" },
     cpu:
       cpu == null
         ? { status: "error", data: null, message: "boom" }

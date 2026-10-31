@@ -10,7 +10,7 @@
 | **M0** | P0 | Chốt tài liệu đặc tả, kiến trúc, context, phạm vi | — | **Duyệt 2026-10-31** |
 | **M1** | P0 | Khởi tạo repo + frontend/backend chạy trên ASUS | M0 | **Duyệt 2026-10-31** |
 | **M2** | P0 | Dashboard metrics thật + realtime + trạng thái offline | M1 | **Duyệt 2026-10-31** |
-| **M2.5** | P0 | Đăng nhập mật khẩu owner (D-23), bảo vệ `/api` trừ `/health`, CSRF/Origin, đổi tên thiết bị (D-24) | M1 | Chưa |
+| **M2.5** | P0 | Đăng nhập mật khẩu owner (D-23), bảo vệ `/api` trừ `/health`, CSRF/Origin, đổi tên thiết bị (D-24) | M1 | **Chờ duyệt** |
 | **M3** | P0 | Remote Desktop GUI Dell tích hợp trong web | M1, M2, M2.5 | Chưa |
 | **M4** | P1 | File Manager giới hạn quyền + upload/download | M1, M2.5 | Chưa |
 | **M5** | P1 | System Services, logs, thao tác allowlist | M1, M2.5 | Chưa |
@@ -83,7 +83,7 @@ Changes: backend/app/services/metrics.py (MetricsCollector), api/metrics.py (GET
          device.py (metrics = supported, battery theo adapter), tests/test_metrics.py;
          frontend: lib/history.ts (300 mẫu = 10 phút), hooks/useMetrics.ts, components/LineChart.tsx (SVG tự viết),
          Dashboard (4 KPI, chart CPU/RAM + network, Sensors, Live/Stale/Offline), lib/status.ts (freshness)
-Tests: scripts	est.ps1 -> ruff OK, pytest 23 passed, vitest 13 passed, tsc + vite build OK
+Tests: scripts\test.ps1 -> ruff OK, pytest 23 passed, vitest 13 passed, tsc + vite build OK
 Evidence: ASUS (label "this ASUS"): tải 8 tiến trình -> CPU 24% -> 52-65% trên chart; 3 viewer gọi đồng thời nhận cùng giá trị;
           kill backend -> "Offline · last updated hh:mm:ss", giữ chart cũ; bật lại -> Live không reload, chart có khoảng trống;
           360px không tràn ngang (scrollWidth 360). Temperature/fans Windows = N/A + lý do; pin 80%, AC plugged in.
@@ -110,6 +110,34 @@ Next: M2.5
 - Request ghi khác Origin ⇒ 403; sai 5 lần ⇒ 429.
 - Đổi tên ⇒ topbar, Dashboard và `/api/metrics` hiện tên mới, giữ sau restart; "về mặc định" trả lại `DEVICE_LABEL`/hostname.
 - Không có mật khẩu/hash/secret trong git, log hay response.
+
+**Tiến độ**
+```text
+Milestone: M2.5
+Status: Chờ owner duyệt (code + test xong 2026-10-31)
+Commit: "M2.5: owner login, CSRF/Origin, device rename", branch navi (chưa push)
+Changes: backend/app/services/auth.py (scrypt, cookie "<expires>.<hmac>", key = STATE_DIR/session_secret + hash, khóa 5 lần/60 s),
+         api/guard.py (middleware duy nhất: Origin + JSON cho request ghi, rồi session; chỉ /api/health, /api/auth/* public),
+         api/auth.py (login/logout/session), api/device.py (PATCH /api/device), services/device.py (device.json, label_source),
+         api/errors.py (ApiError có code), config.py (OWNER_PASSWORD_HASH, ALLOWED_ORIGINS, ghi .env),
+         __main__.py (python -m app set-password), scripts/set-password.ps1, .env.example;
+         frontend: App = cổng session (không poll API bảo vệ trước khi login), Shell.tsx (app cũ + 401 -> Login, Logout),
+         pages/Login.tsx, components/DeviceName.tsx (đổi tên inline, Reset khi label_source=custom), lib/label.ts,
+         api/client.ts (sendJson, 401 -> unauthorized), vite.config.ts (proxy changeOrigin:false để giữ Host)
+Tests: scripts\test.ps1 -> ruff OK, pytest 54 passed, vitest 15 passed, tsc + vite build OK
+Evidence: ASUS: chưa có mật khẩu -> Login báo "No owner password set yet" + lệnh set-password, login 503;
+          mật khẩu tạm -> /api/health 200, /api/system 401 khi chưa login; login 204 -> Dashboard Live như M2;
+          sai 5 lần -> lần 6 trả 429 (Retry-After: 60), đúng mật khẩu cũng 429 trong lúc khóa;
+          restart backend -> cookie cũ vẫn dùng được; đổi hash -> cookie cũ 401;
+          PATCH Origin lạ / thiếu Origin / form-encoded -> 403; qua Vite dev proxy cùng origin -> 200;
+          đổi tên "Dell thử nghiệm ☕" -> topbar, Dashboard, /api/metrics cập nhật, giữ sau restart; Reset -> "this ASUS" (env);
+          Logout -> Login; 360px Login và form đổi tên không tràn ngang. Log backend không có mật khẩu/hash/cookie.
+          Mật khẩu tạm đã xóa khỏi backend/.env sau khi test: owner tự chạy set-password.ps1.
+Risks: Host/Origin sau Tailscale Serve chưa kiểm (M6); nếu Serve đổi Host thì thêm URL Serve vào ALLOWED_ORIGINS.
+       Khóa đăng nhập tính chung (một owner; sau Serve mọi request đều từ 127.0.0.1), nên người khác trong tailnet có thể
+       làm owner phải chờ 60 s. Đổi mật khẩu cần restart backend (hash đọc lúc khởi động).
+Next: M3
+```
 
 ## M3 — Remote Desktop tích hợp GUI
 

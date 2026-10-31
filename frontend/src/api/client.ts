@@ -16,7 +16,25 @@ export function toApiError(err: unknown): ApiError {
   return new ApiError("unknown_error", err instanceof Error ? err.message : String(err));
 }
 
-export async function fetchJson<T>(path: string, opts: { timeoutMs?: number; signal?: AbortSignal } = {}): Promise<T> {
+interface RequestOpts {
+  timeoutMs?: number;
+  signal?: AbortSignal;
+}
+
+export function fetchJson<T>(path: string, opts: RequestOpts = {}): Promise<T> {
+  return request<T>(path, { headers: { Accept: "application/json" } }, opts);
+}
+
+/** JSON write (POST/PATCH). The backend rejects writes without this Content-Type (CSRF guard). */
+export function sendJson<T = void>(method: "POST" | "PATCH", path: string, body: unknown = {}, opts: RequestOpts = {}): Promise<T> {
+  return request<T>(
+    path,
+    { method, headers: { Accept: "application/json", "Content-Type": "application/json" }, body: JSON.stringify(body) },
+    opts,
+  );
+}
+
+async function request<T>(path: string, init: RequestInit, opts: RequestOpts): Promise<T> {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -26,7 +44,8 @@ export async function fetchJson<T>(path: string, opts: { timeoutMs?: number; sig
   opts.signal?.addEventListener("abort", () => controller.abort(), { once: true });
 
   try {
-    const res = await fetch(path, { signal: controller.signal, headers: { Accept: "application/json" } });
+    const res = await fetch(path, { ...init, signal: controller.signal });
+    if (res.status === 204) return undefined as T;
     const body = await res.json().catch(() => null);
     if (!res.ok) {
       if (body?.code) throw new ApiError(body.code, body.message ?? res.statusText, res.status);
@@ -34,6 +53,7 @@ export async function fetchJson<T>(path: string, opts: { timeoutMs?: number; sig
       if (res.status >= 500) {
         throw new ApiError("network_error", `Backend unreachable (HTTP ${res.status}).`, res.status);
       }
+      if (res.status === 401) throw new ApiError("unauthorized", "Sign in to continue.", 401);
       throw new ApiError(`http_${res.status}`, res.statusText, res.status);
     }
     return body as T;

@@ -146,4 +146,4 @@ Next recommended step:
 - M0 đã duyệt 2026-10-31; các điểm mở O-01..O-06 chốt tại milestone tương ứng (safe default trong SPEC).
 - M1 bootstrap giao cho **một** agent, chưa triển khai Dell.
 - Khi M1 pass mới giao M2, sau đó tiến hành tích hợp GUI thật với Dell ở M3.
-- M1, M2 đã duyệt 2026-10-31. Kế tiếp **M2.5** (D-23, D-24), xong mới sang M3.
+- M1, M2 đã duyệt 2026-10-31. **M2.5** (D-23, D-24) xong code, chờ owner duyệt; kế tiếp M3.

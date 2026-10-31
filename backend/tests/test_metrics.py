@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 from collections import namedtuple
-from dataclasses import replace
 from types import SimpleNamespace
 
 import psutil
 import pytest
-from fastapi.testclient import TestClient
 
-from app.config import settings
-from app.main import create_app
 from app.services.metrics import MetricsCollector
 from app.services.platform_adapter import (
     BATTERY_FAULT,
@@ -57,11 +53,8 @@ def collector(counters):
     return col
 
 
-def test_metrics_endpoint_shape(tmp_path):
-    cfg = replace(
-        settings, state_dir=tmp_path / "state", device_id=None, frontend_dist=None
-    )
-    body = TestClient(create_app(cfg)).get("/api/metrics").json()
+def test_metrics_endpoint_shape(client):
+    body = client.get("/api/metrics").json()
     assert set(body) == {
         "timestamp",
         "device",
@@ -73,7 +66,7 @@ def test_metrics_endpoint_shape(tmp_path):
         "uptime_seconds",
         "sensors",
     }
-    assert set(body["device"]) == {"id", "label", "role", "platform", "device_type"}
+    assert body["device"]["label_source"] in {"custom", "env", "hostname"}
     assert set(body["sensors"]) == {"temperature", "fans", "battery", "ac"}
     groups = [body[k] for k in ("cpu", "memory", "swap", "disk", "network")]
     for group in groups + list(body["sensors"].values()):

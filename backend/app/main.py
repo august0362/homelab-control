@@ -7,7 +7,9 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api import api_router
 from app.api.errors import register_error_handlers
+from app.api.guard import register_guard
 from app.config import APP_NAME, APP_VERSION, Settings, settings
+from app.services.auth import Auth
 from app.services.metrics import MetricsCollector
 from app.services.platform_adapter import get_adapter
 
@@ -24,8 +26,10 @@ def create_app(cfg: Settings = settings) -> FastAPI:
     app.state.settings = cfg
     app.state.adapter = get_adapter()
     app.state.metrics = MetricsCollector(app.state.adapter)
+    app.state.auth = Auth(cfg)
 
     register_error_handlers(app)
+    register_guard(app)
     app.include_router(api_router)
 
     # Mounted last so /api/* always wins; unknown /api paths still get the JSON 404.

@@ -7,6 +7,9 @@ const PATHS = {
   refresh: "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7",
   menu: "M4 6h16M4 12h16M4 18h16",
   cup: "M4 9h12v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM16 11h2a3 3 0 0 1 0 6h-2M8 3v3M12 3v3",
+  logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9",
+  pencil: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z",
+  lock: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4",
 } as const;
 
 export type IconName = keyof typeof PATHS;
