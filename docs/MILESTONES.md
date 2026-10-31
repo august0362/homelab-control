@@ -9,7 +9,7 @@
 |---|---|---|---|---|
 | **M0** | P0 | Chốt tài liệu đặc tả, kiến trúc, context, phạm vi | — | **Duyệt 2026-10-31** |
 | **M1** | P0 | Khởi tạo repo + frontend/backend chạy trên ASUS | M0 | **Duyệt 2026-10-31** |
-| **M2** | P0 | Dashboard metrics thật + realtime + trạng thái offline | M1 | Xong, chờ owner duyệt |
+| **M2** | P0 | Dashboard metrics thật + realtime + trạng thái offline | M1 | **Duyệt 2026-10-31** |
 | **M2.5** | P0 | Auth owner (chốt O-02), bảo vệ `/api` trừ `/health`, CSRF/Origin | M1 | Chưa |
 | **M3** | P0 | Remote Desktop GUI Dell tích hợp trong web | M1, M2, M2.5 | Chưa |
 | **M4** | P1 | File Manager giới hạn quyền + upload/download | M1, M2.5 | Chưa |
@@ -76,8 +76,8 @@ Next: M2
 **Tiến độ**
 ```text
 Milestone: M2
-Status: DONE (chờ owner duyệt)
-Commit: "M2: real metrics, realtime charts, offline/stale", branch navi
+Status: DONE (owner duyệt 2026-10-31)
+Commit: f96457f "M2: real metrics, realtime charts, offline/stale", branch navi
 Changes: backend/app/services/metrics.py (MetricsCollector), api/metrics.py (GET /api/metrics),
          platform_adapter.py (battery/ac_power; Linux đọc /sys/class/power_supply, pin hỏng -> status=error),
          device.py (metrics = supported, battery theo adapter), tests/test_metrics.py;
