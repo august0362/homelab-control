@@ -1,0 +1,147 @@
+# Server Control — Product & Technical Specification
+
+> Status: **DRAFT v0.2**, cần owner review trước khi viết M1.  
+> Phạm vi v1: **một chủ sở hữu**, **một Dell Linux server**, truy cập từ nhiều client qua browser. **Yêu cầu lâu dài đã chốt:** điện thoại/tablet cũng là thiết bị đích có thể được quản lý/điều khiển, không chỉ là client.
+
+## 1. Actors, môi trường và quy ước
+
+| ID | Actor / environment | Vai trò |
+|---|---|---|
+| AC-OWN | Owner | Người duy nhất được phép quản trị server qua UI ở v1 |
+| AC-DEV | ASUS Windows | Viết code, chạy thử frontend + backend, kiểm thử dữ liệu máy ASUS |
+| AC-SRV | Dell Linux Mint | Host production: API, metric collector, desktop ảo, file roots |
+| AC-CL | Browser client | ASUS, Android, tablet (iOS/iPadOS nếu có) trên tailnet |
+| AC-MOB | Future managed target | Điện thoại Android, tablet Android, iPhone/iPad: thiết bị cần quan sát, chuyển file, chia sẻ màn hình và có thể điều khiển theo quyền OS (sau v1) |
+
+Phân biệt **desktop ảo** (một session Xvnc/XFCE của Dell) với **máy ảo** (guest OS riêng) và **màn hình vật lý** (console `:0`). V1 chọn **desktop ảo**; không cam kết chia sẻ chính xác màn hình vật lý.
+
+## 2. Yêu cầu chức năng (FR)
+
+### FR-01 — Dashboard hệ thống (P0)
+- `FR-01.1`: Hiển thị tên thiết bị, OS, thời điểm cập nhật, trạng thái online/offline.
+- `FR-01.2`: CPU tổng %, RAM used/total/%; ổ đĩa root used/total/%; uptime.
+- `FR-01.3`: Lưu lượng mạng receive/transmit theo **bytes/s**, tính bằng delta counters giữa các mẫu; có xử lý reset counters, đổi interface.
+- `FR-01.4`: Biểu đồ cập nhật chu kỳ khoảng **2 giây**, giữ lịch sử tối thiểu 10 phút trong RAM của browser. Không cần DB MVP.
+- `FR-01.5`: Nhiệt độ CPU, pin và nguồn AC được hiển thị **nếu hỗ trợ**; nếu hỏng/thiếu dữ liệu, `N/A` + lý do. Không hiển thị 0% như một số đo tin cậy khi sensor lỗi.
+- `FR-01.6`: Frontend xử lý đang tải, timeout, mất kết nối, kết nối lại, dữ liệu cũ và lỗi API rõ ràng.
+- `FR-01.7`: Trong ASUS dev phải ghi nhãn **"Monitoring this ASUS"**. Trong Dell production ghi nhãn **"Monitoring Dell"**; không tráo nguồn dữ liệu. Nhãn lấy từ `DEVICE_LABEL`/`MACHINE_ROLE` (D-14).
+
+### FR-02 — Remote Desktop GUI (P0)
+- `FR-02.1`: Có trang Remote Desktop tích hợp trong web, dùng chuột, bàn phím, cuộn, fullscreen và cơ chế phím bổ trợ trên mobile nếu khả thi.
+- `FR-02.2`: Dell chạy một session **XFCE + TigerVNC Xvnc** ảo, độ phân giải mặc định thử nghiệm 1280×720.
+- `FR-02.3`: Browser dùng **noVNC** qua WebSocket bridge/websockify; VNC chỉ listen loopback trên Dell hoặc được tunnel an toàn.
+- `FR-02.4`: Có trạng thái Starting / Running / Disconnected / Stopped / Error; không hiển thị desktop giả như đang connected.
+- `FR-02.5`: Cho phép khởi chạy/dừng desktop theo quyền có giới hạn; giữ SSH độc lập để cứu hộ. **Terminal có trong GUI**, không có Web Terminal page riêng.
+- `FR-02.6`: Desktop ảo phải dùng chung filesystem, user và app Linux như SSH, nhưng là session đồ họa **khác** với màn hình vật lý.
+- `FR-02.7`: Trong giai đoạn dev trên ASUS, trang này được scaffold hoặc tích hợp tới Dell test target; **không** hứa chạy desktop Linux thật khi chỉ có ASUS Windows.
+
+### FR-03 — Files (P1)
+- `FR-03.1`: Duyệt thư mục, breadcrumb, xem metadata cơ bản, upload/download file trong một/một số thư mục cấu hình.
+- `FR-03.2`: Giới hạn root, chặn `..`, symlink escape, path traversal và truy cập file nhạy cảm; không chạy shell qua file names.
+- `FR-03.3`: Có tiến độ, lỗi mạng và xử lý file trùng tên bằng chính sách rõ; giới hạn kích thước do owner cấu hình.
+- `FR-03.4`: Trao đổi file qua browser ↔ server. Truyền trực tiếp giữa **hai thiết bị client** hoặc đồng bộ đa chiều là **giai đoạn sau**, không hàm ý tự có từ Files v1.
+- `FR-03.5`: Lệnh xóa/ghi đè có xác nhận và chỉ bật sau khi có test; v1 có thể chỉ upload/download/rename nếu kiểm thử đạt.
+
+### FR-04 — System & Services (P1)
+- `FR-04.1`: Trạng thái service đã cho phép, uptime, logs gần đây có phân trang và giới hạn truy vấn.
+- `FR-04.2`: Ban đầu **read-only**. Sau test mới mở `start/stop/restart` cho danh sách service cụ thể với xác nhận chủ sở hữu.
+- `FR-04.3`: Không có endpoint nhận lệnh shell tùy ý, không truyền tham số trực tiếp vào `sudo`; không cho UI tự sửa firewall, SSH, Tailscale.
+- `FR-04.4`: `shutdown`/`reboot` qua UI **tắt ở v1** do máy có lỗi BIOS/F1 sau mất điện, chỉ xem xét khi owner xác nhận đã khắc phục hoặc chấp nhận rủi ro.
+
+### FR-05 — Truy cập, bảo mật và thiết bị (P0)
+- `FR-05.1`: ASUS dev bind frontend/backend vào `127.0.0.1`; dev không tự mở cổng cho LAN.
+- `FR-05.2`: Dell production bind API vào `127.0.0.1` và xuất bản HTTPS bằng **Tailscale Serve** trong tailnet; không dùng Funnel.
+- `FR-05.3`: Có lớp xác thực chủ sở hữu và kiểm soát session/quyền trước khi cho phép các hành động quản trị; tailnet **không tự động thay thế** phân quyền app. Lựa chọn cơ chế auth được khóa ở M1/M3.
+- `FR-05.4`: Chống CSRF cho action có tác dụng thay đổi trạng thái khi dùng cookie/session; validate Origin/WebSocket; rate-limit nếu phù hợp.
+- `FR-05.5`: Không lưu token, mật khẩu, key vào repo hoặc log; có `.env.example` và file secrets riêng không commit.
+- `FR-05.6`: Responsive ở desktop/tablet/mobile; smartphone truy cập remote GUI có thể khó thao tác do màn hình nhỏ nhưng phải dùng được tối thiểu.
+
+### FR-07 — Mobile/tablet managed targets (P2 — sau v1, yêu cầu kiến trúc)
+- `FR-07.1`: Phân biệt rõ **client** (thiết bị dùng trình duyệt để vào Server Control) và **managed target** (thiết bị bị giám sát/điều khiển). Điện thoại và tablet có thể đảm nhiệm cả hai vai trò.
+- `FR-07.2`: Kiến trúc hỗ trợ `device_id`, `platform`, `device_type`, `online_status`, `capabilities` để về sau thêm Windows/Linux/Android/iOS mà không phải viết lại UI Dashboard hoặc toàn bộ backend.
+- `FR-07.3`: Khả năng theo dõi trạng thái, gửi/nhận file, chia sẻ màn hình, điều khiển chuột/chạm/bàn phím phải **đàm phán theo capabilities** của từng loại thiết bị, không mặc định mọi nền tảng có quyền như Linux.
+- `FR-07.4`: Android: nghiên cứu agent/ADB/scrcpy và điều kiện cấp quyền, kết nối USB/mạng; phải có đồng ý của chủ thiết bị, không tự động bật debug hay can thiệp vượt quyền.
+- `FR-07.5`: iOS/iPadOS: ưu tiên khả năng nền tảng cho phép như chia sẻ màn hình hoặc file; có thể **không có điều khiển toàn màn hình từ xa**, phải mô tả giới hạn trung thực.
+- `FR-07.6`: M7 chỉ được bắt đầu sau khi v1 ổn định; không thêm mobile runtime, agent, cổng hay permission mới vào MVP chỉ để dự phòng.
+- `FR-07.7`: Không xây công cụ truy cập ẩn, điều khiển không đồng ý hoặc vượt cơ chế bảo mật của hệ điều hành; mỗi thiết bị có thể từ chối/ngắt phiên.
+
+### FR-06 — Deployment/operations (P0)
+- `FR-06.1`: Cùng source code chạy được trên Windows và Linux; platform-specific provider chỉ khác chỗ đọc metrics, services, desktop.
+- `FR-06.2`: Build frontend trên ASUS; Dell phục vụ static build và backend qua **một origin**; không chạy Vite dev server trên Dell production.
+- `FR-06.3`: App backend chạy bằng systemd non-root với restart on failure; healthcheck và log giới hạn.
+- `FR-06.4`: Có script/tài liệu backup cấu hình, build, cập nhật, rollback; không làm thay đổi SSH/Tailscale mạng đang dùng nếu chưa có phương án cứu hộ.
+- `FR-06.5`: Chỉ tuyên bố "auto resume after normal reboot" sau khi đã test; **không tuyên bố "power outage recovery"** khi BIOS yêu cầu F1.
+
+## 3. Non-functional requirements (NFR)
+
+| ID | Yêu cầu | Mức/gate thử nghiệm |
+|---|---|---|
+| NFR-01 | Footprint nhẹ | Production ưu tiên CPU/RAM thấp, không bắt buộc Docker/DB. Đo RSS của từng service trên Dell trước khi chốt. |
+| NFR-02 | Realtime ổn định | Poll metrics ~2s; refresh không tạo tiến trình vô hạn; không đòi hard realtime. |
+| NFR-03 | Không bịa chỉ số | Sensor thiếu/trả lỗi => `null` + `status`, không gán 0 giả. |
+| NFR-04 | Khả năng phục hồi | Mất Wi-Fi/API phải hiển thị offline và tự retry; systemd restart nếu backend crash. |
+| NFR-05 | Bảo mật | No shell executor, bind localhost, tailnet-only, auth owner, allowlist operation. |
+| NFR-06 | Portability | Windows dev và Linux prod có cùng API schema; adapter không hỗ trợ trả trạng thái rõ. |
+| NFR-07 | UX | Responsive 360px → desktop; keyboard/desktop functionality rõ giới hạn touch. |
+| NFR-08 | Testability | Backend API tests + frontend build/test; smoke test mạng và VNC trên Dell. |
+| NFR-09 | Sử dụng tài nguyên | VNC/XFCE được bật theo nhu cầu; không bật khi server idle nếu không cần. |
+| NFR-10 | Bảo trì | Lệnh setup/run/build/deploy/rollback trong README; tài liệu re-entry 10 phút. |
+
+## 4. API contract dự kiến (có thể đổi trước M2)
+
+```text
+GET  /api/health           -> {status, timestamp, version}
+GET  /api/system           -> {timestamp, device, os, hardware, capabilities}
+GET  /api/metrics          -> {timestamp, device, cpu, memory, disks, network, uptime, sensors}
+GET  /api/desktop/status   -> {status, session, connection_url?}
+POST /api/desktop/start    -> auth + authorization required (M3)
+POST /api/desktop/stop     -> auth + authorization required (M3)
+GET  /api/files/*          -> limited to configured roots (M4)
+GET  /api/services         -> allowlisted service statuses (M5)
+POST /api/services/{id}/restart -> disabled until M5 authorization verified
+```
+
+- Mọi payload phải có `timestamp` hoặc `last_updated` để nhận biết dữ liệu cũ.
+- `device` = `{id, label, role, platform, device_type}` (FR-07.2). `id` ổn định, không phụ thuộc IP/hostname: env `DEVICE_ID`, nếu trống thì UUID sinh một lần và lưu ở `backend/.state/device_id` (gitignored). `online_status`/`last_seen` thuộc device registry ở M7.
+- `capabilities` = map `{tên: {status, message}}`, `status ∈ supported | unsupported | not_configured | requires_consent`. Tên v1: `metrics`, `temperature`, `fans`, `battery`, `desktop`, `files`, `services`. M7 bổ sung `screen_view`, `remote_input`, `file_transfer`.
+- v1 giữ endpoint phẳng cho thiết bị local; M7 thêm `/api/devices/{id}/...`, endpoint phẳng thành alias của thiết bị local.
+- `/api/metrics` không truyền password/token; field invalid/unsupported phải có trạng thái dễ nhận biết.
+- Error format ổn định (`code`, `message`, `request_id?`) để frontend xử lý.
+- `GET /api/desktop/status` có thể không có connection URL khi ngừng chạy; **không trả token xác thực VNC trong dữ liệu công khai**.
+
+## 5. Acceptance criteria (AT)
+
+| ID | Phương pháp nghiệm thu |
+|---|---|
+| AT-01 | Chạy frontend + backend trên ASUS; Dashboard đọc được CPU/RAM/disk của ASUS và ghi đúng nguồn. |
+| AT-02 | Giết backend hoặc tắt mạng: UI hiện offline/stale và tự hồi phục sau khi dịch vụ trở lại. |
+| AT-03 | Frontend build trên ASUS; server Dell chạy được bản build mà không cần npm dev server. |
+| AT-04 | Browser trong tailnet mở HTTPS app; máy ngoài tailnet không truy cập được; không public port. |
+| AT-05 | Desktop XFCE ảo trên Dell hiển thị qua web; chuột/keyboard hoạt động; mở terminal **trong desktop** và `hostname` cho Dell. |
+| AT-06 | Tắt desktop ảo không làm dừng monitoring/API/SSH/Tailscale. |
+| AT-07 | Upload/download file hợp lệ thành công; `../` và symlink escaping bị từ chối. |
+| AT-08 | Người chưa xác thực không thể gọi endpoints thay đổi trạng thái; lỗi được ghi log không chứa bí mật. |
+| AT-09 | Restart backend bằng systemd; phục hồi sau reboot Linux bình thường; giới hạn outage/F1 được ghi rõ. |
+| AT-10 | Thiết bị di động trong tailnet sử dụng được Dashboard, Files và điều khiển GUI ở mức cơ bản. |
+
+## 6. Chưa quyết định — không tự đoán
+
+1. Danh sách thư mục file được quản lý (`~/Documents`, một thư mục dedicated, v.v.) và giới hạn upload.
+2. Cơ chế xác thực production: app owner login hay tích hợp Tailscale identity headers có xác thực/kiểm chứng.
+3. Các service được phép restart và có cần nhập lại mật khẩu khi thực hiện thao tác nhạy cảm không.
+4. Giao diện đồ họa có dùng XFCE ảo riêng hay ưu tiên chia sẻ console thật? **Đang chọn mặc định XFCE ảo**, có thể điều chỉnh nếu owner cần chia sẻ chính xác desktop vật lý.
+5. Lưu lịch sử metrics lâu dài (SQLite) và thông báo cảnh báo qua điện thoại: không thuộc MVP.
+6. Khi bổ sung giám sát nhiều máy, từng máy có agent hay API proxy theo SSH: để milestone sau.
+
+### Acceptance criteria cho mở rộng M7 (không dùng để nghiệm thu v1)
+- `AT-M7-01`: Danh sách thiết bị phân biệt browser client và managed target; hiển thị platform/capabilities từ dữ liệu thật.
+- `AT-M7-02`: Tính năng không hỗ trợ trên Android/iOS hiển thị rõ lý do, không hiện nút điều khiển giả hoặc trạng thái thành công giả.
+- `AT-M7-03`: Chỉ truy cập thiết bị được chủ sở hữu cho phép; kết thúc phiên hoặc thu hồi quyền phải làm mất quyền điều khiển tương ứng.
+- `AT-M7-04`: Trước khi tuyên bố đã điều khiển được Android/iPad/iPhone, bắt buộc kiểm thử trên thiết bị thật và ghi rõ giới hạn theo OS.
+
+## 7. Tham chiếu chính thức
+
+- Tailscale Serve: https://tailscale.com/docs/features/tailscale-serve
+- Tailscale CLI Serve: https://tailscale.com/docs/reference/tailscale-cli/serve
+- noVNC: https://novnc.com/
+- TigerVNC Xvnc: https://tigervnc.org/doc/Xvnc.html

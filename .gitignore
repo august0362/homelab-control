@@ -1,0 +1,25 @@
+# Dependencies / build
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Secrets & local state (never commit)
+.env
+.env.*
+!.env.example
+backend/.state/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

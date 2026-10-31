@@ -1,0 +1,69 @@
+# HomeLab Control
+
+Private web app to monitor and control a Dell Linux Mint server from an ASUS laptop, phones and tablets over Tailscale. Development runs on the ASUS (Windows); deployment to the Dell comes in M6.
+
+**Status:** M1 (project bootstrap). Milestones and decisions are in [docs/](docs/); start with [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
+
+## Structure
+
+```
+backend/    FastAPI + psutil (Python 3.12+), tests in backend/tests
+frontend/   React + TypeScript + Vite
+scripts/    PowerShell helpers for Windows dev
+deploy/     Linux deployment files (M6)
+docs/       Spec, architecture, milestones, decisions
+```
+
+## Requirements
+
+Python 3.12+ (the Dell runs 3.12), Node 20+, Git. Nothing is installed globally: the backend uses `backend/.venv` and the frontend uses its local `node_modules`.
+
+## Commands (PowerShell, from the repo root)
+
+| Task | Command |
+|---|---|
+| Setup (once, re-runnable) | `powershell -ExecutionPolicy Bypass -File scripts\setup.ps1` |
+| Dev (opens 2 windows) | `powershell -ExecutionPolicy Bypass -File scripts\dev.ps1` |
+| Lint + tests + build | `powershell -ExecutionPolicy Bypass -File scripts\test.ps1` |
+| Production build | `powershell -ExecutionPolicy Bypass -File scripts\build.ps1` |
+
+Manual equivalents:
+
+```powershell
+cd backend;  .\.venv\Scripts\python -m app --reload   # API on 127.0.0.1:8000
+cd frontend; npm run dev                               # UI on 127.0.0.1:5173, proxies /api
+```
+
+## URLs
+
+- UI (dev): http://localhost:5173
+- API health: http://127.0.0.1:8000/api/health
+- System info: http://127.0.0.1:8000/api/system
+- API docs (role `dev` only): http://127.0.0.1:8000/api/docs
+- After `build.ps1`, the backend also serves the UI at http://127.0.0.1:8000
+
+## Configuration
+
+Copy `backend/.env.example` to `backend/.env` (setup does this). Never commit `.env`.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `HOST` / `PORT` | `127.0.0.1` / `8000` | Bind address; keep loopback (remote access goes through Tailscale Serve) |
+| `DEVICE_ID` | empty | Empty = UUID generated once in `STATE_DIR/device_id` |
+| `DEVICE_LABEL` | hostname | Shown as "Monitoring &lt;label&gt;" |
+| `MACHINE_ROLE` | `dev` | `dev` or `production` |
+| `FRONTEND_DIST` | `../frontend/dist` | Built UI served on the same origin when it has `index.html` |
+| `STATE_DIR` | `.state` | Local state (gitignored) |
+| `LOG_LEVEL` | `info` | Uvicorn log level |
+
+Frontend: `frontend/.env` may set `VITE_API_PROXY_TARGET` (dev proxy target, default `http://127.0.0.1:8000`).
+
+## API (M1, read-only)
+
+- `GET /api/health` → `{status, timestamp, version}`
+- `GET /api/system` → `{timestamp, device, os, hardware, app, capabilities}`
+- Errors are always `{code, message}`.
+
+## Security rules
+
+GET-only API, no shell execution from web input, bound to 127.0.0.1, no public ports, no secrets in git. Details: [docs/CONTEXT.md](docs/CONTEXT.md).

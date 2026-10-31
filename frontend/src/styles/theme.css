@@ -1,0 +1,32 @@
+/* Coffee dark theme (docs/CONTEXT.md D-13). Series order is fixed; status colors
+   are reserved for state and always paired with a text label. */
+:root {
+  color-scheme: dark;
+
+  --bg: #120d0a;
+  --surface: #1c1512;
+  --surface-2: #241b16;
+  --border: #3a2c24;
+
+  --text: #f3e9df;
+  --text-2: #c7b3a3;
+  --muted: #a08b7b;
+  --accent: #c8742c;
+
+  --s1: #c8742c; /* caramel */
+  --s2: #199e70; /* aqua */
+  --s3: #9085e9; /* violet */
+  --s4: #c98500; /* gold */
+
+  --good: #0ca30c;
+  --warn: #fab219;
+  --crit: #d03b3b;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+
+  --radius: 12px;
+  --gap: 16px;
+  --sidebar-w: 232px;
+  --topbar-h: 56px;
+}
