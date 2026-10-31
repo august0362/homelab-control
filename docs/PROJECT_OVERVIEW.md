@@ -15,7 +15,7 @@
 6. **Cách truy cập production dự kiến:** HTTPS riêng trong tailnet qua **Tailscale Serve**, chuyển tiếp về ứng dụng trên `127.0.0.1`. Không dùng Funnel, không mở router port forwarding.
 7. **Ranh giới:** Windows có thể test monitoring thật của **ASUS**; muốn xem GUI Linux thật phải chạy desktop/VNC trên **Dell**, dù frontend/backend đang phát triển trên ASUS.
 8. **Đọc thứ tự:** `SPEC.md` → `ARCHITECTURE.md` → `MILESTONES.md` → `CONTEXT.md`.
-9. **Việc kế tiếp:** **M2.5** (auth owner + đổi tên thiết bị; chốt O-02). O-01..O-11 chốt tại milestone tương ứng; chưa cài Cockpit hoặc giao diện nặng trên Dell. FR-08 (mobile chạy nền / giữ sáng màn hình) đã đặc tả cho **M7D**, chưa code.
+9. **Việc kế tiếp:** **M2.5**: đăng nhập bằng mật khẩu riêng của app (D-23, đã chốt O-02) + đổi tên thiết bị (D-24). O-01..O-11 chốt tại milestone tương ứng; chưa cài Cockpit hoặc giao diện nặng trên Dell. FR-08 (mobile chạy nền / giữ sáng màn hình) đã đặc tả cho **M7D**, chưa code.
 10. **Quy tắc vận hành:** Không cài/deploy gì lên Dell khi chưa có bước thử/rollback rõ ràng; không tự chạy lệnh nguy hiểm từ UI.
 
 ## Vision & trải nghiệm

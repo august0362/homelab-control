@@ -10,7 +10,7 @@
 | **M0** | P0 | Chốt tài liệu đặc tả, kiến trúc, context, phạm vi | — | **Duyệt 2026-10-31** |
 | **M1** | P0 | Khởi tạo repo + frontend/backend chạy trên ASUS | M0 | **Duyệt 2026-10-31** |
 | **M2** | P0 | Dashboard metrics thật + realtime + trạng thái offline | M1 | **Duyệt 2026-10-31** |
-| **M2.5** | P0 | Auth owner (chốt O-02), bảo vệ `/api` trừ `/health`, CSRF/Origin | M1 | Chưa |
+| **M2.5** | P0 | Đăng nhập mật khẩu owner (D-23), bảo vệ `/api` trừ `/health`, CSRF/Origin, đổi tên thiết bị (D-24) | M1 | Chưa |
 | **M3** | P0 | Remote Desktop GUI Dell tích hợp trong web | M1, M2, M2.5 | Chưa |
 | **M4** | P1 | File Manager giới hạn quyền + upload/download | M1, M2.5 | Chưa |
 | **M5** | P1 | System Services, logs, thao tác allowlist | M1, M2.5 | Chưa |
@@ -92,6 +92,24 @@ Risks: Linux battery/sysfs/AC và nhiệt độ chỉ test bằng mock, chưa ch
        CPU % tự tính từ delta cpu_times() (psutil.cpu_percent giữ mẫu theo từng thread -> trả 0.0 trên threadpool).
 Next: M2.5
 ```
+
+## M2.5 — Đăng nhập owner + đổi tên thiết bị
+
+**Task**
+- `scripts\set-password.ps1` (gọi `python -m app set-password`): nhập mật khẩu ẩn, ghi `OWNER_PASSWORD_HASH` (scrypt) vào `backend/.env`; không in, không log mật khẩu.
+- `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`; cookie ký HMAC 30 ngày, secret sinh một lần trong `STATE_DIR`.
+- Mọi `/api/*` trừ `/api/health`, `/api/auth/*` trả `401 {code, message}` khi chưa đăng nhập.
+- Request ghi (POST/PUT/PATCH/DELETE): kiểm tra `Origin` khớp host + bắt buộc `application/json`; sai ⇒ `403`.
+- Sai mật khẩu 5 lần ⇒ `429` trong 60 s.
+- `PATCH /api/device {label}`: lưu `STATE_DIR/device.json`, `null` = về mặc định; validate 1–40 ký tự.
+- UI: trang Login, nút Logout, 401 ở bất kỳ request nào ⇒ về Login; sửa tên tại thẻ Device.
+
+**Acceptance**
+- Chưa đăng nhập: `/api/health` 200; `/api/system`, `/api/metrics` 401. Đăng nhập xong: dashboard như M2.
+- Restart backend: vẫn đăng nhập. Đổi mật khẩu: session cũ bị đá ra.
+- Request ghi khác Origin ⇒ 403; sai 5 lần ⇒ 429.
+- Đổi tên ⇒ topbar, Dashboard và `/api/metrics` hiện tên mới, giữ sau restart; "về mặc định" trả lại `DEVICE_LABEL`/hostname.
+- Không có mật khẩu/hash/secret trong git, log hay response.
 
 ## M3 — Remote Desktop tích hợp GUI
 

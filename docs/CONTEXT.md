@@ -55,7 +55,7 @@ Owner muốn tận dụng laptop Linux cũ làm server tại nhà 24/7 và tự 
 ### Quyết định bổ sung khi duyệt M0 (2026-10-31)
 
 - `D-13` UI theo bố cục tham chiếu NexusHost (sidebar nhóm + thẻ health, header `thiết bị · OS · online`, 4 thẻ KPI viền nét đứt, biểu đồ lớn + donut, thẻ chi tiết sparkline) với **theme nâu cà phê tối**. Token màu ở `frontend/src/styles/theme.css`; màu series đã kiểm định CVD trên nền `#1c1512`: caramel `#c8742c`, aqua `#199e70`, violet `#9085e9`, gold `#c98500`. Màu trạng thái dành riêng, luôn kèm nhãn. Thành phần giả của ảnh mẫu (search, user, MySQL…) không được đưa vào.
-- `D-14` Nhãn nguồn dữ liệu (FR-01.7) lấy từ env `DEVICE_LABEL` + `MACHINE_ROLE=dev|production`, không suy từ OS.
+- `D-14` Nhãn nguồn dữ liệu (FR-01.7) lấy từ env `DEVICE_LABEL` + `MACHINE_ROLE=dev|production`, không suy từ OS. *(Bổ sung bởi D-24: owner đổi được tên trên UI.)*
 - `D-15` "Không shell" nghĩa là: không lệnh nào lấy từ input browser. Hành động allowlist (vd. start/stop desktop ở M3) được gọi **lệnh cố định** qua subprocess argv, không `shell=True`.
 - `D-16` Auth là milestone riêng **M2.5**, bắt buộc trước M3/M4/M5; O-02 chốt tại M2.5.
 
@@ -67,6 +67,11 @@ Owner muốn tận dụng laptop Linux cũ làm server tại nhà 24/7 và tự 
 - `D-20` Agent chỉ hoạt động trong quyền OS do chủ thiết bị cấp: không root/jailbreak, không tự bật quyền nguy hiểm/debugging, không chạy ẩn. "Giữ màn hình sáng" khác "đánh thức màn hình đã khóa"; việc thứ hai không thuộc FR-08.
 - `D-21` Giữ modular monolith: device control là module trong FastAPI, không thêm microservice, broker hay tiến trình mới trên Dell (ADR-009).
 - `D-22` Thiết bị đích hiện tại là **2 máy Android (Xiaomi, Samsung)**. Owner không có Mac ⇒ **không làm agent iOS native**; iOS/iPadOS chỉ giữ ở mức thiết kế (hiển thị `unsupported` trung thực) cho tới khi có thiết bị.
+
+### Quyết định khi bắt đầu M2.5 (2026-10-31)
+
+- `D-23` **Chốt O-02:** đăng nhập bằng **mật khẩu riêng của app**, một owner, không username. Chỉ lưu hash `scrypt` (stdlib) trong `backend/.env` (`OWNER_PASSWORD_HASH`), đặt bằng `scripts\set-password.ps1`. Session = cookie ký HMAC (HttpOnly, SameSite=Strict, Secure khi production), nhớ **30 ngày** mỗi thiết bị, sống qua restart; đổi mật khẩu ⇒ mọi session hết hiệu lực. Chống CSRF bằng SameSite=Strict + kiểm tra `Origin` + bắt buộc JSON cho mọi request ghi. Sai 5 lần ⇒ khóa đăng nhập 60 s. Chưa đặt mật khẩu ⇒ không ai đăng nhập được (không có cờ bypass). Danh tính Tailscale có thể thêm **sau M6** như lớp tiện lợi, không thay mật khẩu.
+- `D-24` Owner **đổi được tên thiết bị** trên UI (thao tác ghi đầu tiên, cần đăng nhập + CSRF). Lưu ở `STATE_DIR/device.json`; ưu tiên **tên đặt trên UI > `DEVICE_LABEL` > hostname**; có "về mặc định". 1–40 ký tự, không ký tự điều khiển. M7 dùng cùng cơ chế cho điện thoại/tablet.
 
 ## 4. Đề xuất kỹ thuật đang ở mức DRAFT
 
@@ -85,7 +90,7 @@ Các đề xuất này có thể sửa trước M1 nếu owner có lý do; AI kh
 | ID | Câu hỏi | Khi nào cần |
 |---|---|---|
 | O-01 | Các thư mục Dell được Files quản lý? | Trước M4 |
-| O-02 | Auth owner: local login hay verified identity qua Tailscale? | Trước M3/M4 |
+| O-02 | ~~Auth owner: local login hay verified identity qua Tailscale?~~ **Đã chốt: mật khẩu riêng của app** (D-23) | — |
 | O-03 | Allowlist của services được phép restart? | Trước M5 |
 | O-04 | Muốn share desktop vật lý hay XFCE session ảo? Đề xuất phiên ảo | Trước nghiệm thu M3 |
 | O-05 | Cần gửi file giữa **các client** trực tiếp hay chỉ browser↔server? V1 browser↔server | Trước M4 |
@@ -141,3 +146,4 @@ Next recommended step:
 - M0 đã duyệt 2026-10-31; các điểm mở O-01..O-06 chốt tại milestone tương ứng (safe default trong SPEC).
 - M1 bootstrap giao cho **một** agent, chưa triển khai Dell.
 - Khi M1 pass mới giao M2, sau đó tiến hành tích hợp GUI thật với Dell ở M3.
+- M1, M2 đã duyệt 2026-10-31. Kế tiếp **M2.5** (D-23, D-24), xong mới sang M3.

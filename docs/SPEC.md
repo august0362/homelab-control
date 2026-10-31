@@ -24,7 +24,7 @@ Phân biệt **desktop ảo** (một session Xvnc/XFCE của Dell) với **máy 
 - `FR-01.4`: Biểu đồ cập nhật chu kỳ khoảng **2 giây**, giữ lịch sử tối thiểu 10 phút trong RAM của browser. Không cần DB MVP.
 - `FR-01.5`: Nhiệt độ CPU, pin và nguồn AC được hiển thị **nếu hỗ trợ**; nếu hỏng/thiếu dữ liệu, `N/A` + lý do. Không hiển thị 0% như một số đo tin cậy khi sensor lỗi.
 - `FR-01.6`: Frontend xử lý đang tải, timeout, mất kết nối, kết nối lại, dữ liệu cũ và lỗi API rõ ràng.
-- `FR-01.7`: Trong ASUS dev phải ghi nhãn **"Monitoring this ASUS"**. Trong Dell production ghi nhãn **"Monitoring Dell"**; không tráo nguồn dữ liệu. Nhãn lấy từ `DEVICE_LABEL`/`MACHINE_ROLE` (D-14).
+- `FR-01.7`: Trong ASUS dev phải ghi nhãn **"Monitoring this ASUS"**. Trong Dell production ghi nhãn **"Monitoring Dell"**; không tráo nguồn dữ liệu. Nhãn mặc định lấy từ `DEVICE_LABEL`/`MACHINE_ROLE` (D-14); từ M2.5 owner đổi được tên trên UI (D-24), tên đặt trên UI được ưu tiên.
 
 ### FR-02 — Remote Desktop GUI (P0)
 - `FR-02.1`: Có trang Remote Desktop tích hợp trong web, dùng chuột, bàn phím, cuộn, fullscreen và cơ chế phím bổ trợ trên mobile nếu khả thi.
@@ -51,7 +51,7 @@ Phân biệt **desktop ảo** (một session Xvnc/XFCE của Dell) với **máy 
 ### FR-05 — Truy cập, bảo mật và thiết bị (P0)
 - `FR-05.1`: ASUS dev bind frontend/backend vào `127.0.0.1`; dev không tự mở cổng cho LAN.
 - `FR-05.2`: Dell production bind API vào `127.0.0.1` và xuất bản HTTPS bằng **Tailscale Serve** trong tailnet; không dùng Funnel.
-- `FR-05.3`: Có lớp xác thực chủ sở hữu và kiểm soát session/quyền trước khi cho phép các hành động quản trị; tailnet **không tự động thay thế** phân quyền app. Lựa chọn cơ chế auth được khóa ở M1/M3.
+- `FR-05.3`: Có lớp xác thực chủ sở hữu và kiểm soát session/quyền trước khi cho phép các hành động quản trị; tailnet **không tự động thay thế** phân quyền app. **Đã chốt (D-23):** mật khẩu riêng của app, session cookie 30 ngày; mọi `/api/*` trừ `/api/health` và `/api/auth/*` cần đăng nhập.
 - `FR-05.4`: Chống CSRF cho action có tác dụng thay đổi trạng thái khi dùng cookie/session; validate Origin/WebSocket; rate-limit nếu phù hợp.
 - `FR-05.5`: Không lưu token, mật khẩu, key vào repo hoặc log; có `.env.example` và file secrets riêng không commit.
 - `FR-05.6`: Responsive ở desktop/tablet/mobile; smartphone truy cập remote GUI có thể khó thao tác do màn hình nhỏ nhưng phải dùng được tối thiểu.
@@ -126,6 +126,10 @@ Owner dùng Server Control trên ASUS để quản lý điện thoại/tablet **
 ```text
 GET  /api/health           -> {status, timestamp, version}
 GET  /api/system           -> {timestamp, device, os, hardware, capabilities}
+POST /api/auth/login       -> {password} -> 204 + session cookie | 401 | 429 (M2.5)
+POST /api/auth/logout      -> 204, xóa cookie (M2.5)
+GET  /api/auth/session     -> {authenticated, configured, expires_at?} (public, M2.5)
+PATCH /api/device          -> {label: string | null} -> device; null = về mặc định (M2.5, owner + CSRF)
 GET  /api/metrics          -> {timestamp, device, cpu, memory, swap, disk, network, uptime_seconds, sensors{temperature, fans, battery, ac}}
 GET  /api/desktop/status   -> {status, session, connection_url?}
 POST /api/desktop/start    -> auth + authorization required (M3)
@@ -163,7 +167,7 @@ POST /api/services/{id}/restart -> disabled until M5 authorization verified
 ## 6. Chưa quyết định — không tự đoán
 
 1. Danh sách thư mục file được quản lý (`~/Documents`, một thư mục dedicated, v.v.) và giới hạn upload.
-2. Cơ chế xác thực production: app owner login hay tích hợp Tailscale identity headers có xác thực/kiểm chứng.
+2. ~~Cơ chế xác thực production~~: **đã chốt mật khẩu riêng của app** (D-23); Tailscale identity có thể bổ sung sau M6.
 3. Các service được phép restart và có cần nhập lại mật khẩu khi thực hiện thao tác nhạy cảm không.
 4. Giao diện đồ họa có dùng XFCE ảo riêng hay ưu tiên chia sẻ console thật? **Đang chọn mặc định XFCE ảo**, có thể điều chỉnh nếu owner cần chia sẻ chính xác desktop vật lý.
 5. Lưu lịch sử metrics lâu dài (SQLite) và thông báo cảnh báo qua điện thoại: không thuộc MVP.
