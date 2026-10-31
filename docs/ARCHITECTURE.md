@@ -99,6 +99,8 @@ Tailscale tailnet
 | `backend/services/files` | thao tác tệp trong configured roots | Không expose `/etc`, home root hay toàn disk |
 | `backend/services/system` | trạng thái dịch vụ allowlist và logs giới hạn | Không `sudo` tùy ý hoặc edit firewall |
 | `backend/services/desktop` | trạng thái VNC (banner RFB), start/stop unit `systemctl --user` argv cố định, đếm viewer; cầu nối ở `api/desktop.py` | Không xử lý raw video encoding, không websockify |
+| `backend/services/runner` | chạy lệnh server: tại chỗ (Dell) hoặc qua SSH alias khi staging trên ASUS (D-28) | Không nhận lệnh/tham số từ browser; không chạy được trên Windows nếu không có `REMOTE_SSH` |
+| `backend/services/power` | ngủ nhẹ/thức dậy/dọn dẹp theo danh sách tác vụ tùy chọn cố định, restart có xác nhận (D-27); quyền qua polkit rule cho đúng 1 user | Không tắt nguồn, không đụng ssh/tailscaled/NetworkManager/systemd/app |
 | `deploy/linux` | systemd, env template, healthcheck, deploy/rollback docs | Không cấu hình lại BIOS hoặc thay đổi mạng bắt buộc |
 | `backend/services/devices` (M7) | Device registry, enrollment, heartbeat, capabilities của thiết bị đích | Không quét mạng/tailnet để tự thêm thiết bị |
 | `backend/services/device_control` (M7D) | Command lifecycle, desired/reported state, audit lệnh | Không gửi lệnh tự do/shell, không kết nối chủ động vào điện thoại |

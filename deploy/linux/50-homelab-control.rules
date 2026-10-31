@@ -1,0 +1,33 @@
+// HomeLab Control (D-27): lets ONE user start/stop a fixed list of optional services and
+// restart the machine without a password, so the web app can offer Light sleep, Clean up
+// and Restart. Installed by power-setup.sh, which replaces @USER@ with your user name.
+// Keep the list identical to SYSTEM_UNITS in backend/app/services/power.py (a test checks it).
+polkit.addRule(function (action, subject) {
+  if (subject.user !== "@USER@") {
+    return polkit.Result.NOT_HANDLED;
+  }
+  if (action.id === "org.freedesktop.systemd1.manage-units") {
+    var units = [
+      "docker.service",
+      "containerd.service",
+      "cups.service",
+      "cups-browsed.service",
+      "fwupd.service",
+      "ModemManager.service",
+      "colord.service",
+      "udisks2.service",
+      "avahi-daemon.service",
+    ];
+    var verb = action.lookup("verb");
+    if (units.indexOf(action.lookup("unit")) >= 0 && (verb === "start" || verb === "stop")) {
+      return polkit.Result.YES;
+    }
+  }
+  if (
+    action.id === "org.freedesktop.login1.reboot" ||
+    action.id === "org.freedesktop.login1.reboot-multiple-sessions"
+  ) {
+    return polkit.Result.YES;
+  }
+  return polkit.Result.NOT_HANDLED;
+});

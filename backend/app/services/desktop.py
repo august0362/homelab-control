@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from app.config import Settings, is_loopback
+from app.services.runner import SSH_FAILED, Runner
 
 log = logging.getLogger(__name__)
 
@@ -72,7 +73,8 @@ class DesktopError(Exception):
 class Desktop:
     """One per app. Holds the parsed config and the open viewer bridges."""
 
-    def __init__(self, cfg: Settings) -> None:
+    def __init__(self, cfg: Settings, runner: Runner | None = None) -> None:
+        self.runner = runner or Runner(None)
         self.target: Target | None = None
         self.problem = NOT_CONFIGURED  # why there is no target
         if cfg.desktop_vnc:
@@ -130,12 +132,8 @@ class Desktop:
 
     def _systemctl(self, action: str) -> subprocess.CompletedProcess[str]:
         assert self.unit
-        return subprocess.run(
-            ["systemctl", "--user", action, self.unit],
-            capture_output=True,
-            text=True,
-            timeout=SYSTEMCTL_TIMEOUT,
-            check=False,
+        return self.runner.run(
+            ["systemctl", "--user", action, self.unit], SYSTEMCTL_TIMEOUT
         )
 
     def _answering(self) -> bool:
@@ -149,9 +147,12 @@ class Desktop:
             return "not_configured", self.problem
         if self.unit:
             try:
-                state = self._systemctl("is-active").stdout.strip()
+                result = self._systemctl("is-active")
             except (OSError, subprocess.TimeoutExpired):
                 return "error", "Could not ask systemd about the desktop service."
+            if result.returncode == SSH_FAILED and self.runner.remote:
+                return "error", "Cannot reach the server over SSH."
+            state = result.stdout.strip()
             if state == "failed":
                 return "error", (
                     f"The desktop service failed. On the server: "
@@ -186,6 +187,10 @@ class Desktop:
                 f"desktop_{action}_failed",
                 f"systemctl {action} took longer than {SYSTEMCTL_TIMEOUT} s.",
             ) from None
+        if result.returncode == SSH_FAILED and self.runner.remote:
+            raise DesktopError(
+                f"desktop_{action}_failed", "Cannot reach the server over SSH."
+            )
         if result.returncode != 0:
             # stderr may name paths or users: never logged or returned, point to journalctl.
             log.warning(

@@ -82,3 +82,18 @@ export interface DesktopStatus {
   viewers: number;
   connection_url: string | null; // WebSocket path, only while running
 }
+
+export interface PowerTask {
+  unit: string; // e.g. docker.service; only optional tasks are listed (D-27)
+  scope: "system" | "user";
+  active: boolean;
+}
+
+export interface PowerStatus {
+  available: boolean; // false on the Windows dev machine without REMOTE_SSH
+  reachable: boolean;
+  label: string;
+  sleeping_since: string | null; // set while in light sleep
+  tasks: PowerTask[];
+  message: string | null;
+}

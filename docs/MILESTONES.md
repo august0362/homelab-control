@@ -203,6 +203,14 @@ Evidence B: Dell (Mint 22.3 XFCE, đã có sẵn XFCE): unit active, socket srw-
 Bug tìm thấy và sửa: TigerVNC blacklist chặn viewer sau 5 probe (mọi client socket chung địa chỉ) -> -UseBlacklist=0.
 Risks B: Lần đầu XFCE hiện Welcome + hộp thoại colord đòi mật khẩu (bấm Cancel). Không unit thì không phân biệt được
           "desktop dừng" với "tunnel đứt". Start/Stop từ web chỉ có ở M6 (backend chạy trên Dell, DESKTOP_UNIT).
+Bổ sung (owner yêu cầu, 2026-10-31):
+         D-28 staging qua SSH: services/runner.py (REMOTE_SSH), Start/Stop desktop trên web chạy được từ ASUS;
+         start.bat tự mở tunnel desktop, stop.bat tự đóng (scripts/env.ps1 đọc backend/.env).
+         D-27 thẻ Power (trang System): Light sleep / Wake up / Clean up / Restart (xác nhận), không tắt nguồn;
+         services/power.py + api/power.py, polkit rule 50-homelab-control.rules + power-setup.sh (owner chạy sudo).
+         Evidence: start.bat -> tunnel 5901 tự mở; Start trên web -> desktop Dell running; trước khi cài rule,
+         Light sleep -> 403 power_not_permitted và không tắt gì (system đi trước); logic rule thử bằng node trên Dell:
+         docker stop YES, ssh stop NO, reboot YES, power-off NO, user khác NO.
 Next: owner duyệt M3, rồi M4
 ```
 
@@ -223,7 +231,7 @@ Next: owner duyệt M3, rồi M4
 **Task**
 - Read-only service status/logs trước; whitelist services.
 - Chỉ sau khi có auth + audit + tests, cho phép restart một số service an toàn.
-- Không bật power off/reboot trong UI khi F1/CMOS chưa xử lý.
+- Không bật power off trong UI. *(Restart có xác nhận + ngủ nhẹ/dọn dẹp đã thêm sớm theo quyết định owner, D-27.)*
 
 **Acceptance**
 - Từ client chưa auth không gọi được action; không có endpoint shell arbitrary.

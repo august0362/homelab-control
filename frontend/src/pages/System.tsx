@@ -1,4 +1,5 @@
 import { Card } from "../components/Card";
+import { PowerCard } from "../components/PowerCard";
 import { formatBytes, formatDateTime } from "../lib/format";
 import type { PageProps } from "../routes";
 
@@ -8,24 +9,28 @@ export function System({ system }: PageProps) {
   const info = system.data;
   if (!info) {
     return (
-      <Card title="System">
-        {system.error ? (
-          <div className="stack">
-            <p className="error-text">{system.error.message}</p>
-            <button className="btn" onClick={system.retry}>
-              Retry
-            </button>
-          </div>
-        ) : (
-          <p className="muted">Loading…</p>
-        )}
-      </Card>
+      <div className="grid">
+        <PowerCard />
+        <Card title="System" className="span-2">
+          {system.error ? (
+            <div className="stack">
+              <p className="error-text">{system.error.message}</p>
+              <button className="btn" onClick={system.retry}>
+                Retry
+              </button>
+            </div>
+          ) : (
+            <p className="muted">Loading…</p>
+          )}
+        </Card>
+      </div>
     );
   }
 
   const { os, hardware, app, device } = info;
   return (
     <div className="grid">
+      <PowerCard />
       <InfoTable
         title="Operating system"
         accent="s1"

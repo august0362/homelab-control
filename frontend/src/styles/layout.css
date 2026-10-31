@@ -977,3 +977,50 @@ code {
   flex: 1;
   min-width: 0; /* let the key bar wrap and the screen scale down on a phone */
 }
+
+/* ---- Power (D-27) ---- */
+.btn-danger {
+  border-color: color-mix(in srgb, var(--crit) 60%, var(--border));
+}
+
+.btn-danger:hover:not(:disabled) {
+  border-color: var(--crit);
+  background: color-mix(in srgb, var(--crit) 18%, var(--surface-2));
+}
+
+.confirm {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--warn) 50%, var(--border));
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.power-tasks {
+  justify-self: stretch; /* .stack shrinks children to their content */
+}
+
+.power-tasks ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px 16px;
+  margin-top: 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.power-tasks li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.power-tasks summary {
+  cursor: pointer;
+}
+
+.dot-on {
+  background: var(--good);
+}

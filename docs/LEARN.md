@@ -74,6 +74,7 @@ backend/app/
     system.py, metrics.py /api/system, /api/metrics
     device.py             PATCH /api/device (đổi tên thiết bị)
     desktop.py            /api/desktop/status | start | stop + WebSocket /api/desktop/ws (cầu nối VNC)
+    power.py              /api/power + sleep | wake | cleanup | reboot
     errors.py             mọi lỗi trả {code, message}
   services/
     auth.py               scrypt, cookie ký HMAC, khóa sau 5 lần sai
@@ -81,7 +82,9 @@ backend/app/
     platform_adapter.py   khác biệt Windows/Linux
     device.py             id, tên, capabilities của thiết bị
     desktop.py            đọc DESKTOP_VNC, kiểm tra VNC (banner RFB), systemctl --user, đếm viewer
-backend/tests/            pytest (98 test sau M3)
+    runner.py             chạy lệnh server: tại chỗ, hoặc qua SSH khi staging (REMOTE_SSH, D-28)
+    power.py              ngủ nhẹ / thức dậy / dọn dẹp / restart (D-27)
+backend/tests/            pytest (109+ test)
 frontend/src/
   App.tsx                 cổng session: Login | Shell | cửa sổ desktop tách rời
   Shell.tsx               khung app: topbar, sidebar, poll health/system/metrics
@@ -89,11 +92,11 @@ frontend/src/
   api/client.ts           fetchJson / sendJson, chuẩn hóa lỗi
   hooks/                  usePolling, useMetrics, useSession, useVnc, usePopout, useDesktopDock
   pages/                  Dashboard, RemoteDesktop, DesktopWindow, Files, System, Login
-  components/             Card, StatusBadge, Sidebar, Topbar, DeviceName, VncToolbar, LiveDesktop, FloatingDesktop...
+  components/             Card, StatusBadge, Sidebar, Topbar, DeviceName, VncToolbar, LiveDesktop, FloatingDesktop, PowerCard...
   lib/                    hàm thuần có test: format, history, status, label, desktop
   styles/theme.css        token màu theme cà phê (D-13)
-deploy/linux/             script + unit cho Dell (desktop M3; service backend ở M6)
-scripts/                  setup, dev, test, build, set-password (PowerShell)
+deploy/linux/             script + unit + polkit rule cho Dell (desktop M3, power D-27; service backend ở M6)
+scripts/                  setup, dev (+ tự mở tunnel), stop, test, build, set-password, env (PowerShell)
 start.bat / stop.bat      bấm đúp để chạy/dừng dev
 docs/                     SPEC, ARCHITECTURE, MILESTONES, CONTEXT, PROJECT_OVERVIEW, LEARN (file này)
 ```
@@ -162,7 +165,15 @@ noVNC (trình duyệt) ──WebSocket /api/desktop/ws──► FastAPI (kiểm 
   - `DESKTOP_VNC`: `unix:/run/user/<uid>/hlc-vnc.sock` trên Dell, hoặc `tcp:127.0.0.1:5901` qua đường hầm.
   - `DESKTOP_UNIT`: để trống thì start/stop phải làm trên server.
   - `DESKTOP_LABEL`: tên máy hiện trên trang, ví dụ "Dell".
-- **Thử từ ASUS (staging):** `ssh -N -L 127.0.0.1:5901:/run/user/<uid>/hlc-vnc.sock <dell>`. Hướng dẫn đầy đủ ở README → "Remote desktop (staging)". Cứu hộ và gỡ bỏ: `deploy/linux/README.md`.
+- **Dùng từ ASUS (staging, D-28):** `backend/.env` có `REMOTE_SSH` (alias SSH của Dell), nên `start.bat` tự mở đường hầm và nút **Start/Stop** trên web ra lệnh cho Dell qua SSH. Bấm Start → Connect là thấy desktop. Hướng dẫn ở README → "Remote desktop (staging)". Cứu hộ và gỡ bỏ: `deploy/linux/README.md`.
+
+### Bổ sung sau M3: thẻ Power (trang System, D-27)
+
+- **Light sleep** (ngủ nhẹ): tắt các tác vụ nền **tùy chọn** đang chạy (Docker, máy in, firmware, modem, âm thanh, màn hình ảo…) và **ghi nhớ** chúng. **Wake up** bật lại đúng những thứ đó.
+- **Clean up** (reset nhẹ): tắt hết tác vụ tùy chọn, **không ghi nhớ**; dùng khi Dell lag hoặc lười tắt từng thứ.
+- **Restart**: khởi động lại máy, phải xác nhận lần hai.
+- **Không có Shut down**: Wi-Fi Broadcom không đánh thức được và chưa cắm dây LAN, nên tắt rồi thì không bật lại từ xa được.
+- SSH, Tailscale, mạng, systemd và app **không bao giờ** bị tắt. Danh sách cố định trong code. Quyền trên Dell do một quy tắc **polkit** cấp cho đúng user của bạn (`deploy/linux/power-setup.sh`, chạy sudo 1 lần).
 
 ## 8. Nguyên tắc bảo mật (luôn giữ)
 
@@ -182,8 +193,9 @@ noVNC (trình duyệt) ──WebSocket /api/desktop/ws──► FastAPI (kiểm 
 | Dừng dev | Bấm đúp `stop.bat` |
 | Kiểm tra toàn bộ (lint, test, build) | `powershell -ExecutionPolicy Bypass -File scripts\test.ps1` |
 | Đặt mật khẩu (dùng khi lên Dell) | `scripts\set-password.ps1`, rồi restart backend |
-| Bật/tắt desktop Dell (qua SSH) | `systemctl --user start hlc-desktop` / `stop` |
-| Xem desktop Dell từ ASUS | Mở SSH tunnel; đặt `DESKTOP_VNC=tcp:127.0.0.1:5901`, `DESKTOP_LABEL=Dell`; restart backend; vào Remote Desktop → Connect |
+| Xem desktop Dell từ ASUS | `start.bat` → Remote Desktop → **Start** → **Connect** (tunnel tự mở) |
+| Ngủ nhẹ / thức dậy / dọn dẹp / restart Dell | Trang **System** → thẻ **Power** |
+| Bật/tắt desktop bằng tay (qua SSH) | `systemctl --user start hlc-desktop` / `stop` |
 
 URL dev: http://localhost:5173 · API: http://127.0.0.1:8000/api/health · tài liệu API (dev): http://127.0.0.1:8000/api/docs
 
@@ -208,6 +220,8 @@ URL dev: http://localhost:5173 · API: http://127.0.0.1:8000/api/health · tài 
 | DNS rebinding | Trang lạ trỏ tên miền của nó về 127.0.0.1 để đọc app; chặn bằng kiểm Host |
 | Tailscale Serve / Funnel | Serve: HTTPS chỉ trong tailnet (dùng). Funnel: ra Internet (cấm) |
 | Capability | Thiết bị **có thể** làm gì: `supported` / `unsupported` / `not_configured` / `requires_consent` |
+| polkit | Cơ chế cấp quyền của Linux: cho user thường làm một việc cần quyền admin, đúng việc đó thôi |
+| Wake-on-LAN | Đánh thức máy đã tắt bằng gói tin qua **dây mạng**; Wi-Fi của Dell không hỗ trợ |
 
 ## 11. Bài học, lỗi đã gặp và cách sửa
 
@@ -231,6 +245,8 @@ URL dev: http://localhost:5173 · API: http://127.0.0.1:8000/api/health · tài 
 - **D-15:** "không shell" = không lệnh nào từ input; chỉ lệnh cố định.
 - **D-16, D-23, D-25:** đăng nhập là M2.5; dùng mật khẩu riêng của app; dev trên ASUS không cần login.
 - **D-26:** desktop qua Unix socket + cầu nối trong backend, không websockify.
+- **D-27:** thẻ Power: ngủ nhẹ / thức dậy / dọn dẹp / restart có xác nhận; **không tắt nguồn**; danh sách tác vụ cố định; polkit cho đúng 1 user.
+- **D-28:** staging: backend trên ASUS ra lệnh cho Dell qua SSH alias (`REMOTE_SSH`); `start.bat` tự mở tunnel.
 - **O-04:** chọn **màn hình ảo** (không chia sẻ màn hình vật lý); owner vẫn đổi được trước khi duyệt M3.
 
 Câu hỏi còn mở:
@@ -261,10 +277,10 @@ monitor and control a Dell Linux Mint server from an ASUS Windows laptop, phone 
 Reply to the owner in Vietnamese, in plain words; the owner finds complexity burdensome.
 
 Read first: docs/LEARN.md (overview), then docs/PROJECT_OVERVIEW.md, SPEC.md, ARCHITECTURE.md,
-MILESTONES.md, CONTEXT.md. The docs are the source of truth; decisions D-01..D-26 are final (do not re-ask).
+MILESTONES.md, CONTEXT.md. The docs are the source of truth; decisions D-01..D-28 are final (do not re-ask).
 
 State: M0, M1, M2, M2.5 approved. M3 (Remote Desktop: noVNC page, backend WebSocket bridge to a TigerVNC
-Xvnc Unix socket, XFCE virtual session on the Dell, pop-out window, floating in-app panel with a "Docked in page" toggle) done and verified on the real Dell,
+Xvnc Unix socket, XFCE virtual session on the Dell, pop-out window, floating in-app panel with a "Docked in page" toggle; plus a Power card on the System page: light sleep / wake up / clean up / confirmed restart, never shut down, D-27; staging runs server commands over SSH via REMOTE_SSH, D-28) done and verified on the real Dell,
 waiting for owner approval. Next: M4 Files (needs O-01, O-05). Commits are local; the GitHub repo is
 PUBLIC: push only when the owner explicitly says "push".
 

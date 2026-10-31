@@ -74,6 +74,8 @@ Owner muốn tận dụng laptop Linux cũ làm server tại nhà 24/7 và tự 
 - `D-24` Owner **đổi được tên thiết bị** trên UI (thao tác ghi đầu tiên, cần đăng nhập + CSRF). Lưu ở `STATE_DIR/device.json`; ưu tiên **tên đặt trên UI > `DEVICE_LABEL` > hostname**; có "về mặc định". 1–40 ký tự, không ký tự điều khiển. M7 dùng cùng cơ chế cho điện thoại/tablet.
 - `D-25` *(2026-10-31, owner: "máy này chỉ tôi dùng")* **Dev trên ASUS không cần đăng nhập**: khi `MACHINE_ROLE=dev` **và** backend bind loopback, request gửi tới tên loopback (`127.0.0.1`/`localhost`) không cần session; Host khác (chống DNS rebinding), `production` hoặc bind ra ngoài ⇒ vẫn bắt đăng nhập. Request ghi vẫn kiểm tra Origin + JSON. Không phải cờ cấu hình: tự suy từ role + bind. Mật khẩu chỉ cần đặt khi lên Dell (M6). Session nhớ **1 năm** mỗi thiết bị.
 - `D-26` *(M3)* **Không websockify.** Xvnc trên Dell chỉ nghe **Unix socket** (`-rfbunixpath`, mode 0600, `-rfbport -1`): không có cổng TCP VNC nào. Backend tự làm cầu nối WebSocket ↔ VNC ở `/api/desktop/ws`, kiểm session + `Origin` trước khi accept (dùng chung `denial()` với guard HTTP). Xác thực nằm ở một chỗ (backend). Staging từ ASUS: SSH `-L 127.0.0.1:5901:<socket>` + `DESKTOP_VNC=tcp:127.0.0.1:5901`. Desktop chạy theo yêu cầu (ADR-008), không bật lúc boot.
+- `D-27` *(2026-10-31, owner)* **Điều khiển nguồn trên web, không có tắt nguồn.** Kiểm tra Dell: Wi-Fi Broadcom `brcmsmac` không đánh thức được, chưa cắm dây LAN, sleep bị mask để chạy 24/7 ⇒ tắt/ngủ thật thì không bật lại từ xa được. Vì vậy có: **Light sleep** (tắt các tác vụ tùy chọn đang chạy, ghi nhớ ở `STATE_DIR/power.json`), **Wake up** (bật lại đúng những thứ đó), **Clean up** (tắt hết tác vụ tùy chọn, không ghi nhớ: "reset nhẹ" khi lag), **Restart** (`systemctl reboot`, phải gửi `{confirm:"reboot"}` + hộp xác nhận; owner chấp nhận rủi ro F1, thay cho dòng "không reboot từ UI" ở M5). Danh sách tác vụ tùy chọn cố định trong `services/power.py` (docker, containerd, cups, cups-browsed, fwupd, ModemManager, colord, udisks2, avahi-daemon; user: hlc-desktop, pipewire*, wireplumber, filter-chain); ssh, tailscaled, NetworkManager, systemd, dbus, polkit, app **không bao giờ** bị đụng. Quyền: polkit rule `deploy/linux/50-homelab-control.rules` cho đúng 1 user, đúng danh sách + reboot, không power-off (cài bằng `power-setup.sh`, owner chạy sudo).
+- `D-28` *(2026-10-31)* **Staging qua SSH.** Khi app chạy trên ASUS, `REMOTE_SSH` (alias trong `~/.ssh/config`, key auth, chỉ nằm trong `backend/.env`) cho backend chạy các lệnh server cố định qua `ssh -o BatchMode=yes <alias> systemctl ...` (desktop start/stop, power). Mọi token là hằng hoặc giá trị config đã kiểm regex, không lấy gì từ web. Không có `REMOTE_SSH` thì trên Windows mọi điều khiển server bị tắt (không bao giờ đụng ASUS). `start.bat` tự mở tunnel desktop, `stop.bat` tự đóng. M6 chạy tại chỗ trên Dell, bỏ `REMOTE_SSH`.
 
 ## 4. Đề xuất kỹ thuật đang ở mức DRAFT
 
@@ -93,7 +95,7 @@ Các đề xuất này có thể sửa trước M1 nếu owner có lý do; AI kh
 |---|---|---|
 | O-01 | Các thư mục Dell được Files quản lý? | Trước M4 |
 | O-02 | ~~Auth owner: local login hay verified identity qua Tailscale?~~ **Đã chốt: mật khẩu riêng của app** (D-23) | — |
-| O-03 | Allowlist của services được phép restart? | Trước M5 |
+| O-03 | Allowlist của services được phép restart? *(Danh sách tác vụ được tắt/bật khi ngủ nhẹ đã chốt ở D-27; restart từng service vẫn chờ M5)* | Trước M5 |
 | O-04 | Muốn share desktop vật lý hay XFCE session ảo? **Mặc định phiên ảo** (M3 làm theo hướng này), owner vẫn đổi được trước khi duyệt M3 | Trước nghiệm thu M3 |
 | O-05 | Cần gửi file giữa **các client** trực tiếp hay chỉ browser↔server? V1 browser↔server | Trước M4 |
 | O-06 | Có muốn theo dõi nhiều host trong dashboard v1 không? Mặc định 1 host Dell | Trước M7 |
@@ -148,4 +150,4 @@ Next recommended step:
 - M0 đã duyệt 2026-10-31; các điểm mở O-01..O-06 chốt tại milestone tương ứng (safe default trong SPEC).
 - M1 bootstrap giao cho **một** agent, chưa triển khai Dell.
 - Khi M1 pass mới giao M2, sau đó tiến hành tích hợp GUI thật với Dell ở M3.
-- M1, M2, M2.5 đã duyệt 2026-10-31. **M3** xong cả hai phần (phần B kiểm trên Dell thật 2026-10-31: XFCE ảo, `hostname` trong Terminal = Dell, không cổng VNC), chờ owner duyệt; O-04 = phiên ảo. Kế tiếp **M4** (Files, cần chốt O-01/O-05).
+- M1, M2, M2.5 đã duyệt 2026-10-31. **M3** xong cả hai phần (phần B kiểm trên Dell thật 2026-10-31: XFCE ảo, `hostname` trong Terminal = Dell, không cổng VNC), chờ owner duyệt; O-04 = phiên ảo. Bổ sung theo yêu cầu owner: khung nổi, nút Start/Stop dùng được từ ASUS (D-28), thẻ Power (D-27). Kế tiếp **M4** (Files, cần chốt O-01/O-05).

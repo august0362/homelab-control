@@ -17,6 +17,10 @@ WRITE_ROUTES = {
     ("/api/device", "PATCH"),
     ("/api/desktop/start", "POST"),
     ("/api/desktop/stop", "POST"),
+    ("/api/power/sleep", "POST"),
+    ("/api/power/wake", "POST"),
+    ("/api/power/cleanup", "POST"),
+    ("/api/power/reboot", "POST"),
 }
 
 

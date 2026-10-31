@@ -135,6 +135,11 @@ GET  /api/desktop/status   -> {status, message, label, can_control, viewers, con
 POST /api/desktop/start    -> 204 | 409 desktop_unmanaged | 503 desktop_not_configured (owner + CSRF, M3)
 POST /api/desktop/stop     -> như start; đóng luôn các viewer đang mở (M3)
 WS   /api/desktop/ws       -> byte RFB browser <-> VNC; Origin + session kiểm lúc mở, sai -> đóng 1008 (M3, D-26)
+GET  /api/power            -> {available, reachable, label, sleeping_since, tasks[{unit, scope, active}], message} (D-27)
+POST /api/power/sleep      -> {stopped}: ngủ nhẹ, tắt các tác vụ tùy chọn đang chạy và ghi nhớ (owner + CSRF)
+POST /api/power/wake       -> {started}: bật lại đúng những gì sleep đã tắt
+POST /api/power/cleanup    -> {stopped}: tắt mọi tác vụ tùy chọn, không ghi nhớ ("reset nhẹ")
+POST /api/power/reboot     -> {confirm: "reboot"} -> 204; KHÔNG có tắt nguồn (D-27)
 GET  /api/files/*          -> limited to configured roots (M4)
 GET  /api/services         -> allowlisted service statuses (M5)
 POST /api/services/{id}/restart -> disabled until M5 authorization verified

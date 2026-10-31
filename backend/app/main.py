@@ -13,6 +13,8 @@ from app.services.auth import Auth
 from app.services.desktop import Desktop
 from app.services.metrics import MetricsCollector
 from app.services.platform_adapter import get_adapter
+from app.services.power import Power
+from app.services.runner import Runner
 
 
 def create_app(cfg: Settings = settings) -> FastAPI:
@@ -28,7 +30,9 @@ def create_app(cfg: Settings = settings) -> FastAPI:
     app.state.adapter = get_adapter()
     app.state.metrics = MetricsCollector(app.state.adapter)
     app.state.auth = Auth(cfg)
-    app.state.desktop = Desktop(cfg)
+    runner = Runner(cfg.remote_ssh)  # local on the Dell, SSH while staging (D-28)
+    app.state.desktop = Desktop(cfg, runner)
+    app.state.power = Power(cfg, runner, app.state.desktop.unit)
 
     register_error_handlers(app)
     register_guard(app)

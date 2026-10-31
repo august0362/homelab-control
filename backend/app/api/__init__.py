@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api import auth, desktop, device, health, metrics, system
+from app.api import auth, desktop, device, health, metrics, power, system
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(health.router)
@@ -11,3 +11,4 @@ api_router.include_router(system.router)
 api_router.include_router(metrics.router)
 api_router.include_router(device.router)
 api_router.include_router(desktop.router)
+api_router.include_router(power.router)

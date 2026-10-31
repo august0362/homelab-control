@@ -34,6 +34,7 @@ def cfg(tmp_path):
         desktop_vnc=None,  # a local .env must not leak into tests
         desktop_unit=None,
         desktop_label=None,
+        remote_ssh=None,
     )
 
 

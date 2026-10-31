@@ -64,7 +64,8 @@ Copy `backend/.env.example` to `backend/.env` (setup does this). Never commit `.
 | `ALLOWED_ORIGINS` | empty | Extra origins allowed to send writes, comma-separated (e.g. the Tailscale Serve URL in M6) |
 | `DESKTOP_VNC` | empty | VNC target for Remote Desktop: `unix:/run/user/<uid>/hlc-vnc.sock` (Dell) or `tcp:127.0.0.1:<port>` (SSH tunnel). Empty = not configured; non-loopback hosts are refused |
 | `DESKTOP_UNIT` | empty | systemd `--user` unit the UI starts/stops (e.g. `hlc-desktop.service`). Empty = start/stop happens on the server |
-| `DESKTOP_LABEL` | device label | Whose desktop it is, shown on the page (`Dell` while staging from the ASUS) |
+| `DESKTOP_LABEL` | device label | The server's name on the Remote Desktop page and the Power card (`Dell` while staging from the ASUS) |
+| `REMOTE_SSH` | empty | Staging (D-28): an SSH `Host` alias for the Dell; desktop start/stop and power commands run over SSH, and `start.bat` opens the desktop tunnel. Empty on the Dell itself |
 
 Frontend: `frontend/.env` may set `VITE_API_PROXY_TARGET` (dev proxy target, default `http://127.0.0.1:8000`).
 
@@ -82,20 +83,26 @@ Everything under `/api` except `/api/health` and `/api/auth/*` needs the session
 - `GET /api/desktop/status` → `{status, message, label, can_control, viewers, connection_url}`; `status` = `not_configured | stopped | starting | running | error`. `running` means the VNC server answered with its RFB banner; `connection_url` is `/api/desktop/ws` only then. No VNC credentials are ever returned.
 - `POST /api/desktop/start` · `POST /api/desktop/stop` → `204`; run `systemctl --user start|stop $DESKTOP_UNIT` (fixed argv). `503 desktop_not_configured` without `DESKTOP_VNC`, `409 desktop_unmanaged` without `DESKTOP_UNIT`, `500 desktop_start_failed|desktop_stop_failed` (details stay in `journalctl --user` on the server). Stop also closes open viewers.
 - `WS /api/desktop/ws` → raw RFB bytes between noVNC and the VNC server (subprotocol `binary`). Needs a matching `Origin` and a session (or D-25), checked once when it opens; refused with close code 1008 otherwise.
+- `GET /api/power` → `{available, reachable, label, sleeping_since, tasks[{unit, scope, active}], message}` (D-27). Only optional tasks are listed; ssh, Tailscale, the network and this app are never touched.
+- `POST /api/power/sleep` → `{stopped}`: light sleep, stops the optional tasks that run and remembers them · `POST /api/power/wake` → `{started}`: starts exactly those again · `POST /api/power/cleanup` → `{stopped}`: stops every optional task, remembers nothing · `POST /api/power/reboot {confirm: "reboot"}` → `204`. No shut down (nothing could switch the Dell back on). `409 power_unavailable` on the Windows dev machine without `REMOTE_SSH`, `403 power_not_permitted` until `deploy/linux/power-setup.sh` ran, `502 server_unreachable` when SSH fails.
 - Errors are always `{code, message}`.
 
 ## Remote desktop (staging)
 
 The desktop is a separate XFCE session on the Dell (TigerVNC Xvnc, 1280x720, started on demand). Xvnc listens **only on a Unix socket** (`/run/user/<uid>/hlc-vnc.sock`, mode 0600): there is no VNC TCP port and no websockify. The backend bridges the browser's WebSocket to that socket after checking the session and `Origin` (D-26). Dell setup, rescue and undo: [deploy/linux/README.md](deploy/linux/README.md).
 
-Before the full deploy (M6), the ASUS can show the Dell's desktop:
+Before the full deploy (M6), the ASUS drives the Dell over SSH (D-28). Once, in ASUS `backend/.env`:
 
-1. Dell, over SSH: `systemctl --user start hlc-desktop`
-2. ASUS, keep open: `ssh -N -L 127.0.0.1:5901:/run/user/<uid>/hlc-vnc.sock <user>@<dell>` (OpenSSH forwards a local loopback port to the remote socket)
-3. ASUS `backend/.env`: `DESKTOP_VNC=tcp:127.0.0.1:5901`, `DESKTOP_LABEL=Dell`, `DESKTOP_UNIT` empty; restart the backend, open Remote Desktop, press Connect.
-4. When done: `systemctl --user stop hlc-desktop` on the Dell, close the tunnel.
+```
+REMOTE_SSH=<ssh alias of the Dell>
+DESKTOP_VNC=tcp:127.0.0.1:5901
+DESKTOP_UNIT=hlc-desktop.service
+DESKTOP_LABEL=Dell
+```
+
+Then every day: `start.bat` (it also opens the tunnel `127.0.0.1:5901 → /run/user/<uid>/hlc-vnc.sock`) → Remote Desktop → **Start** → **Connect**. **Stop** turns the Dell's desktop off again; `stop.bat` closes the tunnel too. The desktop never starts by itself (ADR-008).
 
 While the tunnel is open, any program on the ASUS can reach the Dell's desktop through 127.0.0.1:5901 (accepted: only the owner uses the ASUS, D-25). **Pop out** opens the desktop in a window of its own (only the screen and its keys; move it to another monitor); its **Return to page** button closes it and shows the desktop in the page again. Untick **Docked in page** to lift the desktop out into a floating panel that stays over every page (drag its title bar, resize from the corner; position and size are remembered per browser); tick it again to put the desktop back in the page. Phones: the toolbar has Ctrl+Alt+Del, Esc, Tab and a Keyboard button that opens the on-screen keyboard (best effort; typed text and Backspace/Enter are sent, other special keys are not).
 ## Security rules
 
-Owner login on every API call except health, CSRF checks on writes, the only write routes are login/logout, rename and desktop start/stop, no shell execution from web input, bound to 127.0.0.1, no public ports, no secrets in git. Details: [docs/CONTEXT.md](docs/CONTEXT.md).
+Owner login on every API call except health, CSRF checks on writes, the only write routes are login/logout, rename, desktop start/stop and power (light sleep, wake, clean up, confirmed restart; no shut down), no shell execution from web input, bound to 127.0.0.1, no public ports, no secrets in git. Details: [docs/CONTEXT.md](docs/CONTEXT.md).

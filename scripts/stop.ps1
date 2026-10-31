@@ -1,5 +1,9 @@
-# Stops the dev servers from dev.ps1 (ports 8000 and 5173) and closes their windows.
-$ports = 8000, 5173
+# Stops the dev servers from dev.ps1 (ports 8000 and 5173, plus the staging SSH tunnel)
+# and closes their windows.
+. (Join-Path $PSScriptRoot "env.ps1")
+$ports = @(8000, 5173)
+$tunnel = Get-TunnelPort
+if ($tunnel) { $ports += $tunnel }
 $listeners = Get-NetTCPConnection -LocalPort $ports -State Listen -ErrorAction SilentlyContinue |
     Select-Object -ExpandProperty OwningProcess -Unique
 if (-not $listeners) {

@@ -53,6 +53,7 @@ class Settings:
     desktop_vnc: str | None = None  # "unix:/path.sock" or "tcp:127.0.0.1:5901" (D-26)
     desktop_unit: str | None = None  # systemd --user unit for start/stop
     desktop_label: str | None = None  # whose screen it is; default = device label
+    remote_ssh: str | None = None  # staging: run server commands over SSH (D-28)
 
 
 def load_settings() -> Settings:
@@ -75,6 +76,7 @@ def load_settings() -> Settings:
         desktop_vnc=_env("DESKTOP_VNC") or None,
         desktop_unit=_env("DESKTOP_UNIT") or None,
         desktop_label=_env("DESKTOP_LABEL") or None,
+        remote_ssh=_env("REMOTE_SSH") or None,
     )
 
 
