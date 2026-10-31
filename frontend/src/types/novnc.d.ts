@@ -3,6 +3,8 @@ declare module "@novnc/novnc" {
   export default class RFB extends EventTarget {
     constructor(target: HTMLElement, url: string, options?: { wsProtocols?: string[]; shared?: boolean });
     scaleViewport: boolean;
+    compressionLevel: number;
+    qualityLevel: number;
     resizeSession: boolean;
     background: string;
     disconnect(): void;

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 from app.api.errors import ApiError
-from app.services.device import device_label
+from app.services.device import server_label
 from app.services.power import Power, PowerError
 
 router = APIRouter(prefix="/power")
@@ -43,7 +43,7 @@ def status(request: Request) -> dict[str, Any]:
     body: dict[str, Any] = {
         "available": power.runner.available,
         "reachable": False,
-        "label": cfg.desktop_label or device_label(cfg)[0],
+        "label": server_label(cfg)[0],
         "sleeping_since": power.sleeping_since(),
         "tasks": [],
         "message": None if power.runner.available else UNAVAILABLE,

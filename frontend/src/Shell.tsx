@@ -75,7 +75,7 @@ export function Shell({ onSignedOut, canLogout }: { onSignedOut: () => void; can
           <div>
             <h1>{route.label}</h1>
             <p className="page-sub">
-              {info ? `${info.hardware.hostname} · ${info.os.pretty_name}` : "Unknown device"}
+              {info ? `${info.device.label} · ${info.os.pretty_name}` : "Unknown device"}
               {" · "}
               <span className={`online-${online}`}>{online}</span>
             </p>

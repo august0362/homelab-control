@@ -17,7 +17,7 @@ from starlette.websockets import WebSocketDisconnect, WebSocketState
 from app.api.errors import ApiError
 from app.api.guard import denial
 from app.services.desktop import Desktop, DesktopError
-from app.services.device import device_label
+from app.services.device import server_label
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/desktop")
@@ -35,10 +35,12 @@ def status(request: Request) -> dict[str, Any]:
     desktop: Desktop = request.app.state.desktop
     cfg = request.app.state.settings
     state, message = desktop.status()
+    label, label_source = server_label(cfg)
     return {
         "status": state,
         "message": message,
-        "label": cfg.desktop_label or device_label(cfg)[0],
+        "label": label,
+        "label_source": label_source,
         "can_control": desktop.can_control,
         "viewers": desktop.viewers,
         "connection_url": WS_PATH if state == "running" else None,

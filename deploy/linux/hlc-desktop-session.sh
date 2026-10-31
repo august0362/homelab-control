@@ -28,4 +28,22 @@ done
 
 unset DBUS_SESSION_BUS_ADDRESS # XFCE gets its own session bus
 export DISPLAY=:1 XDG_SESSION_TYPE=x11
-exec dbus-launch --exit-with-session startxfce4
+eval "$(dbus-launch --sh-syntax --exit-with-x11)"
+
+# The Dell's Wi-Fi (BCM4313) uploads slowly, so keep the picture cheap to send: no
+# compositor effects (shadows, fades) and a plain background instead of the wallpaper.
+# These are the user's XFCE settings; the laptop's own screen runs no desktop.
+(
+  i=0
+  while ! pgrep -u "$(id -u)" -x xfdesktop >/dev/null && [ "$i" -lt 60 ]; do
+    i=$((i + 1))
+    sleep 0.5
+  done
+  sleep 2
+  xfconf-query -c xfwm4 -p /general/use_compositing -s false
+  for p in $(xfconf-query -c xfce4-desktop -l | grep '/image-style$'); do
+    xfconf-query -c xfce4-desktop -p "$p" -s 0
+  done
+) &
+
+exec startxfce4

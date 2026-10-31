@@ -1,17 +1,32 @@
 import { type FormEvent, useState } from "react";
 import { sendJson, toApiError } from "../api/client";
-import type { Device } from "../api/types";
+import type { LabelSource } from "../api/types";
 import { LABEL_MAX_LENGTH, validateLabel } from "../lib/label";
 import { Icon } from "./Icon";
 
-const SOURCE: Record<Device["label_source"], string> = {
-  custom: "Renamed on this page",
-  env: "Default from DEVICE_LABEL",
+const SOURCE: Record<LabelSource, string> = {
+  custom: "Renamed in the app",
+  env: "Default from backend/.env",
   hostname: "Default: hostname",
+  default: "Default name",
 };
 
-/** Device name with inline rename (D-24). onSaved refreshes everything that shows the name. */
-export function DeviceName({ device, onSaved }: { device: Device; onSaved: () => void }) {
+interface Props {
+  label: string;
+  source: LabelSource;
+  endpoint?: string; // PATCH target: this device, or /api/server for the Linux server
+  hint?: string;
+  onSaved: () => void; // refresh everything that shows the name
+}
+
+/** A name with inline rename (D-24): this device on the Dashboard, the server on Remote Desktop. */
+export function DeviceName({
+  label: current,
+  source,
+  endpoint = "/api/device",
+  hint = "Shown in the top bar and on the dashboard.",
+  onSaved,
+}: Props) {
   const [draft, setDraft] = useState<string | null>(null); // null = not editing
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +40,7 @@ export function DeviceName({ device, onSaved }: { device: Device; onSaved: () =>
     }
     setBusy(true);
     try {
-      await sendJson<Device>("PATCH", "/api/device", { label });
+      await sendJson("PATCH", endpoint, { label });
       setDraft(null);
       onSaved();
     } catch (err) {
@@ -43,8 +58,8 @@ export function DeviceName({ device, onSaved }: { device: Device; onSaved: () =>
   if (draft === null) {
     return (
       <span className="device-name">
-        <span className="truncate" title={SOURCE[device.label_source]}>
-          {device.label}
+        <span className="truncate" title={SOURCE[source]}>
+          {current}
         </span>
         <button
           className="icon-btn icon-btn-sm"
@@ -52,7 +67,7 @@ export function DeviceName({ device, onSaved }: { device: Device; onSaved: () =>
           aria-label="Rename device"
           title="Rename"
           onClick={() => {
-            setDraft(device.label);
+            setDraft(current);
             setError(null);
           }}
         >
@@ -80,7 +95,7 @@ export function DeviceName({ device, onSaved }: { device: Device; onSaved: () =>
         <button className="btn" type="button" disabled={busy} onClick={() => setDraft(null)}>
           Cancel
         </button>
-        {device.label_source === "custom" && (
+        {source === "custom" && (
           <button className="btn" type="button" disabled={busy} onClick={() => void save(null)}>
             Reset to default
           </button>
@@ -91,7 +106,9 @@ export function DeviceName({ device, onSaved }: { device: Device; onSaved: () =>
           {error}
         </p>
       )}
-      <p className="muted rename-hint">1–{LABEL_MAX_LENGTH} characters. Shown in the top bar and on the dashboard.</p>
+      <p className="muted rename-hint">
+        1–{LABEL_MAX_LENGTH} characters. {hint}
+      </p>
     </form>
   );
 }

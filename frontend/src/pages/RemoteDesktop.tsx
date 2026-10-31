@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { sendJson, toApiError } from "../api/client";
 import type { DesktopStatus } from "../api/types";
 import { Card } from "../components/Card";
+import { DeviceName } from "../components/DeviceName";
 import { NotConfigured } from "../components/NotConfigured";
 import { StatusBadge } from "../components/StatusBadge";
 import { VncToolbar } from "../components/VncToolbar";
@@ -90,9 +91,19 @@ export function RemoteDesktop({ dock }: PageProps) {
   return (
     <Card title="Remote Desktop" accent="s1" actions={<StatusBadge {...desktopStatusView(state, vnc.state)} />}>
       <div className="stack">
-        <p>
-          Desktop: <strong>{desktop.label}</strong> <span className="muted">· {viewers}</span>
-        </p>
+        <div className="desktop-name">
+          <span>Desktop:</span>
+          <strong>
+            <DeviceName
+              label={desktop.label}
+              source={desktop.label_source}
+              endpoint="/api/server"
+              hint="The server's name on Remote Desktop and the Power card."
+              onSaved={status.retry}
+            />
+          </strong>
+          <span className="muted">· {viewers}</span>
+        </div>
         <p className="muted">{desktop.message}</p>
         <div className="desktop-actions">
           <button
@@ -156,8 +167,8 @@ export function RemoteDesktop({ dock }: PageProps) {
         {vnc.error && <p className="error-text">{vnc.error}</p>}
       </div>
       {live && !dock.floating && (
-        <div className="vnc-frame" ref={frame}>
-          <VncToolbar rfb={vnc.rfb} frame={frame} connected={vnc.state === "connected"} />
+        <div className={`vnc-frame${vnc.focused ? " vnc-focused" : ""}`} ref={frame}>
+          <VncToolbar rfb={vnc.rfb} frame={frame} connected={vnc.state === "connected"} focused={vnc.focused} />
           <div className="vnc-screen" ref={screen} />
           {vnc.state === "connecting" && <p className="vnc-overlay muted">Connecting…</p>}
         </div>

@@ -130,6 +130,7 @@ POST /api/auth/login       -> {password} -> 204 + session cookie | 401 | 429 (M2
 POST /api/auth/logout      -> 204, xóa cookie (M2.5)
 GET  /api/auth/session     -> {authenticated, login_required, configured, expires_at?} (public, M2.5; login_required=false = dev loopback, D-25)
 PATCH /api/device          -> {label: string | null} -> device; null = về mặc định (M2.5, owner + CSRF)
+PATCH /api/server          -> {label: string | null} -> {label, label_source}: tên server trên Remote Desktop/Power (staging lưu STATE_DIR/server.json; trên chính server = đổi tên device, D-24)
 GET  /api/metrics          -> {timestamp, device, cpu, memory, swap, disk, network, uptime_seconds, sensors{temperature, fans, battery, ac}}
 GET  /api/desktop/status   -> {status, message, label, can_control, viewers, connection_url} (M3)
 POST /api/desktop/start    -> 204 | 409 desktop_unmanaged | 503 desktop_not_configured (owner + CSRF, M3)

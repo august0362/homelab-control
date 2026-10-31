@@ -9,7 +9,6 @@ import json
 import socket
 import unicodedata
 import uuid
-from pathlib import Path
 from typing import Any
 
 from app.config import Settings
@@ -58,22 +57,22 @@ def validate_label(raw: str) -> str:
     return label
 
 
-def _settings_path(cfg: Settings) -> Path:
-    return cfg.state_dir / "device.json"
+DEVICE_FILE = "device.json"
+SERVER_FILE = "server.json"  # the Linux server's name while staging from the ASUS
 
 
-def saved_label(cfg: Settings) -> str | None:
+def saved_label(cfg: Settings, name: str = DEVICE_FILE) -> str | None:
     """Name set on the UI; a missing or broken file just means "no custom name"."""
     try:
-        label = json.loads(_settings_path(cfg).read_text(encoding="utf-8"))["label"]
+        label = json.loads((cfg.state_dir / name).read_text(encoding="utf-8"))["label"]
         return validate_label(label)
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
         return None
 
 
-def save_label(cfg: Settings, label: str | None) -> None:
-    """Store a validated label; None removes it (back to DEVICE_LABEL / hostname)."""
-    path = _settings_path(cfg)
+def save_label(cfg: Settings, label: str | None, name: str = DEVICE_FILE) -> None:
+    """Store a validated label; None removes it (back to the default name)."""
+    path = cfg.state_dir / name
     if label is None:
         path.unlink(missing_ok=True)
         return
@@ -90,6 +89,28 @@ def device_label(cfg: Settings) -> tuple[str, str]:
     if cfg.device_label:
         return cfg.device_label, "env"
     return socket.gethostname(), "hostname"
+
+
+def _staging(cfg: Settings) -> bool:
+    """The server is another machine (the app runs on the ASUS)."""
+    return bool(cfg.remote_ssh or cfg.desktop_label)
+
+
+def server_label(cfg: Settings) -> tuple[str, str]:
+    """(label, source) of the Linux server shown on Remote Desktop and Power. When the app
+    runs on the server itself it is this device's name; while staging: UI name >
+    DESKTOP_LABEL > "Server"."""
+    if not _staging(cfg):
+        return device_label(cfg)
+    if custom := saved_label(cfg, SERVER_FILE):
+        return custom, "custom"
+    if cfg.desktop_label:
+        return cfg.desktop_label, "env"
+    return "Server", "default"
+
+
+def save_server_label(cfg: Settings, label: str | None) -> None:
+    save_label(cfg, label, SERVER_FILE if _staging(cfg) else DEVICE_FILE)
 
 
 def device_info(cfg: Settings, adapter: PlatformAdapter) -> dict[str, Any]:

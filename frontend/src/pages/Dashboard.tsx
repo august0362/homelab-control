@@ -123,7 +123,8 @@ export function Dashboard({ system, health, metrics }: PageProps) {
             <dt>Name</dt>
             <dd>
               <DeviceName
-                device={info.device}
+                label={info.device.label}
+                source={info.device.label_source}
                 onSaved={() => {
                   system.retry();
                   metrics.retry();

@@ -15,6 +15,7 @@ WRITE_ROUTES = {
     ("/api/auth/login", "POST"),
     ("/api/auth/logout", "POST"),
     ("/api/device", "PATCH"),
+    ("/api/server", "PATCH"),
     ("/api/desktop/start", "POST"),
     ("/api/desktop/stop", "POST"),
     ("/api/power/sleep", "POST"),

@@ -8,15 +8,24 @@ interface Props {
   rfb: RefObject<RFB | null>;
   frame: RefObject<HTMLDivElement | null>;
   connected: boolean;
+  focused: boolean; // focus mode: the screen has the keyboard
 }
 
+// Keyboard Lock (Chromium, fullscreen only): Alt+Tab, the Windows key, Ctrl+W... go to the desktop.
+type KeyboardLock = { lock?: () => Promise<void>; unlock?: () => void };
+const keyboardLock = () => (navigator as Navigator & { keyboard?: KeyboardLock }).keyboard;
+
 /** Keys a phone or browser cannot send by itself, fullscreen, and an on-screen keyboard trigger. */
-export function VncToolbar({ rfb, frame, connected }: Props) {
+export function VncToolbar({ rfb, frame, connected, focused }: Props) {
   const input = useRef<HTMLTextAreaElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
-    const sync = () => setFullscreen(document.fullscreenElement === frame.current);
+    const sync = () => {
+      const on = document.fullscreenElement === frame.current;
+      setFullscreen(on);
+      if (!on) keyboardLock()?.unlock?.();
+    };
     document.addEventListener("fullscreenchange", sync);
     return () => document.removeEventListener("fullscreenchange", sync);
   }, [frame]);
@@ -28,7 +37,12 @@ export function VncToolbar({ rfb, frame, connected }: Props) {
 
   const toggleFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else frame.current?.requestFullscreen().catch(() => {});
+    else
+      frame.current
+        ?.requestFullscreen()
+        .then(() => keyboardLock()?.lock?.())
+        .then(() => rfb.current?.focus())
+        .catch(() => {});
   };
 
   const openKeyboard = () => {
@@ -71,6 +85,15 @@ export function VncToolbar({ rfb, frame, connected }: Props) {
           {fullscreen ? "Exit fullscreen" : "Fullscreen"}
         </button>
       )}
+      <span className={`focus-hint${focused ? " focus-on" : ""}`} role="status">
+        {!connected
+          ? ""
+          : focused
+            ? fullscreen
+              ? "Focus mode: every key goes to the desktop · hold Esc to leave fullscreen"
+              : "Focus mode: keys go to the desktop · click outside the screen to leave"
+            : "Click the screen to control it"}
+      </span>
       <textarea
         ref={input}
         className="vnc-keyboard-input"

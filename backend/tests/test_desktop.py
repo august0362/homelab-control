@@ -136,6 +136,7 @@ def test_not_configured_by_default(client):
         "status",
         "message",
         "label",
+        "label_source",
         "can_control",
         "viewers",
         "connection_url",
@@ -343,3 +344,27 @@ def test_open_viewer_counts_as_running_without_probing(cfg, closed_port):
     assert desktop.status()[0] == "stopped"
     with desktop.viewer():
         assert desktop.status()[0] == "running"  # the bridge is the proof; no probe
+
+
+def test_server_can_be_renamed_while_staging(cfg, rfb_port):
+    client = signed_in(
+        cfg, desktop_vnc=f"tcp:127.0.0.1:{rfb_port}", desktop_label="Dell"
+    )
+    body = client.get("/api/desktop/status").json()
+    assert (body["label"], body["label_source"]) == ("Dell", "env")
+    res = client.patch("/api/server", json={"label": " Máy chủ ☕ "}, headers=ORIGIN)
+    assert res.json() == {"label": "Máy chủ ☕", "label_source": "custom"}
+    assert client.get("/api/desktop/status").json()["label"] == "Máy chủ ☕"
+    assert (
+        client.get("/api/system").json()["device"]["label"] != "Máy chủ ☕"
+    )  # ASUS keeps its name
+    bad = client.patch("/api/server", json={"label": "a\nb"}, headers=ORIGIN)
+    assert bad.status_code == 422 and bad.json()["code"] == "invalid_label"
+    reset = client.patch("/api/server", json={"label": None}, headers=ORIGIN)
+    assert reset.json() == {"label": "Dell", "label_source": "env"}
+
+
+def test_server_name_is_the_device_name_on_the_server_itself(client):
+    res = client.patch("/api/server", json={"label": "Dell server"}, headers=ORIGIN)
+    assert res.json() == {"label": "Dell server", "label_source": "custom"}
+    assert client.get("/api/system").json()["device"]["label"] == "Dell server"

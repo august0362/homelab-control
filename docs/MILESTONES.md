@@ -214,6 +214,10 @@ Bổ sung (owner yêu cầu, 2026-10-31):
          Sau khi owner chạy power-setup.sh (CanReboot = yes), bấm trên web: Light sleep -> 14 tác vụ dừng,
          RAM Dell 944 -> 506 MiB; Wake up -> 14 tác vụ chạy lại (1007 MiB); Clean up -> 14 dừng (517 MiB);
          ssh, tailscaled, NetworkManager luôn active. Restart chưa bấm thử (owner xác nhận reboot không dính F1).
+         Đổi tên server trên trang Remote Desktop (PATCH /api/server, STATE_DIR/server.json), header hiện tên thiết bị
+         thay hostname; chế độ tập trung: bấm màn hình -> viền cam, phím vào desktop; bấm ngoài -> thoát; Fullscreen
+         + Keyboard Lock (Alt+Tab, phím Windows). Lag: Wi-Fi Dell BCM4313 upload ~20-120 KB/s (không phải Tailscale);
+         tắt compositor + nền trơn + nén 6: lần đầu 469 -> 336 KiB (3.9 -> 2.9 s), menu 9.0 -> 3.7 s; khuyên cắm LAN.
 Next: owner duyệt M3, rồi M4
 ```
 

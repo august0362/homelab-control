@@ -45,6 +45,16 @@ First start only: Mint shows its Welcome window and may ask "Authentication is r
 color managed device". Close the first, press **Cancel** on the second (it is the color daemon, not
 needed here).
 
+### Slow Wi-Fi (why the picture lags)
+
+The Dell's Wi-Fi card is a Broadcom BCM4313 (`brcmsmac` driver). Measured 2026-10-31 it uploads only
+~20–120 KB/s (downloads ~650 KB/s, ~3000 retries), over Tailscale or the plain LAN alike, and its
+power saving is already off. The screen travels Dell → browser, so that upload is the limit.
+`hlc-desktop-session.sh` keeps the picture cheap (no compositor, plain background: first picture
+469 → 336 KiB, a menu settles in ~4 s instead of ~9 s) and noVNC uses compression level 6. The real
+fix is a LAN cable (Intel 82579LM gigabit port). Switching the Wi-Fi driver remotely could cut the
+only network link, so it is not done.
+
 ### Measured on the Dell (2026-10-31, i5-3337U, 3.7 GiB)
 
 | State | RAM used | CPU |

@@ -6,10 +6,12 @@ export interface Health {
   version: string;
 }
 
+export type LabelSource = "custom" | "env" | "hostname" | "default"; // "custom" = renamed in the app
+
 export interface Device {
   id: string;
   label: string;
-  label_source: "custom" | "env" | "hostname"; // "custom" = renamed on the UI
+  label_source: LabelSource;
   role: "dev" | "production";
   platform: string;
   device_type: string;
@@ -78,6 +80,7 @@ export interface DesktopStatus {
   status: DesktopState;
   message: string;
   label: string; // whose screen it is, e.g. "Dell" while staging from the ASUS
+  label_source: LabelSource;
   can_control: boolean; // false = start/stop happens on the server (no DESKTOP_UNIT)
   viewers: number;
   connection_url: string | null; // WebSocket path, only while running

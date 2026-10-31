@@ -172,6 +172,9 @@ noVNC (trình duyệt) ──WebSocket /api/desktop/ws──► FastAPI (kiểm 
 - **Light sleep** (ngủ nhẹ): tắt các tác vụ nền **tùy chọn** đang chạy (Docker, máy in, firmware, modem, âm thanh, màn hình ảo…) và **ghi nhớ** chúng. **Wake up** bật lại đúng những thứ đó.
 - **Clean up** (reset nhẹ): tắt hết tác vụ tùy chọn, **không ghi nhớ**; dùng khi Dell lag hoặc lười tắt từng thứ.
 - **Restart**: khởi động lại máy, phải xác nhận lần hai.
+- **Đổi tên server:** bút chì cạnh "Desktop: Dell" (lưu `STATE_DIR/server.json`). Dòng đầu trang hiện tên thiết bị bạn đặt, không còn hiện hostname.
+- **Chế độ tập trung:** bấm vào màn hình là bàn phím thuộc về desktop (viền cam); bấm ra ngoài là trả lại; ở Fullscreen, Edge/Chrome chuyển cả Alt+Tab, phím Windows, Ctrl+W vào desktop (giữ Esc để thoát fullscreen).
+- **Vì sao màn hình lag/mờ:** card Wi-Fi Dell (Broadcom BCM4313) gửi đi chỉ ~20–120 KB/s; hình ảnh đi Dell → trình duyệt nên bị nghẽn. Đã giảm tải (tắt compositor, nền trơn, nén mạnh hơn). UDP không giúp được (Tailscale đã là UDP); cache ảnh chỉ đỡ 3 giây đầu. Cách chữa thật: **cắm dây LAN**.
 - **Không có Shut down**: Wi-Fi Broadcom không đánh thức được và chưa cắm dây LAN, nên tắt rồi thì không bật lại từ xa được.
 - SSH, Tailscale, mạng, systemd và app **không bao giờ** bị tắt. Danh sách cố định trong code. Quyền trên Dell do một quy tắc **polkit** cấp cho đúng user của bạn (`deploy/linux/power-setup.sh`, chạy sudo 1 lần).
 
@@ -222,6 +225,8 @@ URL dev: http://localhost:5173 · API: http://127.0.0.1:8000/api/health · tài 
 | Capability | Thiết bị **có thể** làm gì: `supported` / `unsupported` / `not_configured` / `requires_consent` |
 | polkit | Cơ chế cấp quyền của Linux: cho user thường làm một việc cần quyền admin, đúng việc đó thôi |
 | Wake-on-LAN | Đánh thức máy đã tắt bằng gói tin qua **dây mạng**; Wi-Fi của Dell không hỗ trợ |
+| Keyboard Lock | API của Edge/Chrome: ở fullscreen, trang nhận được cả phím hệ thống (Alt+Tab, phím Windows) |
+| Compositor | Phần vẽ hiệu ứng (bóng, mờ dần) của cửa sổ; tắt đi thì ít phải gửi hình hơn |
 
 ## 11. Bài học, lỗi đã gặp và cách sửa
 
@@ -235,6 +240,7 @@ URL dev: http://localhost:5173 · API: http://127.0.0.1:8000/api/health · tài 
 | Log `app.*` không hiện | Uvicorn chỉ cấu hình logger của nó | `logging.basicConfig` trong `__main__` |
 | Script `.sh` hỏng trên Linux | Windows lưu CRLF | `.gitattributes`: `*.sh`, `*.service` dùng `eol=lf` |
 | Chạy lệnh qua SSH từ Node bị vỡ dấu nháy | cmd.exe xử lý quoting | Gửi script qua stdin: `ssh host bash -s` |
+| Màn hình Dell lag, mờ | Wi-Fi BCM4313 upload ~20–120 KB/s | Giảm dữ liệu (compositor off, nền trơn, nén 6); cắm dây LAN |
 
 ## 12. Quyết định đã chốt (không hỏi lại)
 

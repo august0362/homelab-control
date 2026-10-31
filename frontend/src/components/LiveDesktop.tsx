@@ -34,11 +34,11 @@ export function LiveDesktop({ actions, className = "", setTitle = false }: Props
   }, [desktop, setTitle]);
 
   return (
-    <div className={`live-desktop ${className}`} ref={frame}>
+    <div className={`live-desktop ${className}${vnc.focused ? " vnc-focused" : ""}`} ref={frame}>
       <div className="popout-bar">
         <StatusBadge {...desktopStatusView(desktop?.status ?? null, vnc.state)} />
         <strong>{desktop?.label ?? "Desktop"}</strong>
-        <VncToolbar rfb={vnc.rfb} frame={frame} connected={vnc.state === "connected"} />
+        <VncToolbar rfb={vnc.rfb} frame={frame} connected={vnc.state === "connected"} focused={vnc.focused} />
         {vnc.state === "dropped" && url && (
           <button className="btn btn-sm" onClick={() => setLink({ url: desktopWsUrl(url) })}>
             Reconnect
